@@ -189,3 +189,51 @@ exports.getMe = async (req, res) => {
     return serverErr(res);
   }
 };
+
+/* ── Update My Profile ── */
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, avatar } = req.body;
+    if (!name || !name.trim()) return badReq(res, 'Name is required');
+
+    await db.query(
+      'UPDATE users SET name = ?, avatar = ? WHERE id = ?',
+      [name.trim(), avatar || null, req.user.id]
+    );
+    const [rows] = await db.query(
+      'SELECT id, name, email, role, avatar, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    return ok(res, { message: 'Profile updated', user: rows[0] });
+  } catch (err) {
+    logger.error('updateProfile error', { error: err.message });
+    return serverErr(res);
+  }
+};
+
+/* ── Change Password ── */
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword)
+      return badReq(res, 'Current and new password are required');
+    if (newPassword.length < 8)
+      return badReq(res, 'New password must be at least 8 characters');
+
+    const [users] = await db.query(
+      'SELECT password FROM users WHERE id = ?', [req.user.id]
+    );
+    if (!users.length) return unauth(res, 'Account not found');
+
+    const match = await bcrypt.compare(currentPassword, users[0].password);
+    if (!match) return badReq(res, 'Current password is incorrect');
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hash, req.user.id]);
+
+    return ok(res, { message: 'Password changed successfully' });
+  } catch (err) {
+    logger.error('changePassword error', { error: err.message });
+    return serverErr(res);
+  }
+};

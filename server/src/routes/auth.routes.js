@@ -43,6 +43,8 @@ router.post('/reset-password',
   ctrl.resetPassword
 );
 
-router.get('/me', verifyToken, ctrl.getMe);
+router.get('/me',              verifyToken, ctrl.getMe);
+router.put('/update-profile',  verifyToken, ctrl.updateProfile);
+router.put('/change-password', verifyToken, ctrl.changePassword);
 
 module.exports = router;
