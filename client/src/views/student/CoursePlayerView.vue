@@ -1,12 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore }   from '@/stores/ui'
 import api from '@/services/api'
 import BaseLoader  from '@/components/common/BaseLoader.vue'
 import BaseButton  from '@/components/common/BaseButton.vue'
-import { CheckCircle, Circle, ChevronLeft, ChevronRight, BookOpen, Award } from 'lucide-vue-next'
+import { CheckCircle, Circle, ChevronLeft, ChevronRight, BookOpen, Award, HelpCircle, XCircle, X } from 'lucide-vue-next'
 
 const route   = useRoute()
 const auth    = useAuthStore()
@@ -65,6 +65,46 @@ const prev = () => {
   const idx = currentIdx.value
   if (idx > 0) current.value = flatLessons.value[idx - 1]
 }
+
+/* ── Module quiz ── */
+const quizOpen     = ref(false)
+const quiz         = ref(null)
+const quizLoading  = ref(false)
+const answers      = ref({})
+const quizResult   = ref(null)
+const submitting   = ref(false)
+const quizModuleTitle = ref('')
+
+const openQuiz = async (mod) => {
+  quizOpen.value = true
+  quizLoading.value = true
+  quizResult.value = null
+  answers.value = {}
+  quizModuleTitle.value = mod.title
+  try {
+    const { data } = await api.get(`/evaluations/take/${mod.id}`)
+    quiz.value = data.data
+  } catch { ui.toastError('Could not load quiz') }
+  finally { quizLoading.value = false }
+}
+
+const allAnswered = computed(() =>
+  quiz.value?.questions?.every(q => answers.value[q.id] != null))
+
+const submitQuiz = async () => {
+  if (!allAnswered.value) { ui.toastError('Answer all questions first'); return }
+  submitting.value = true
+  try {
+    const { data } = await api.post(`/evaluations/${quiz.value.id}/submit`, { answers: answers.value })
+    quizResult.value = data.data
+    if (data.data.passed) ui.toast(`Passed with ${data.data.score}%! 🎉`)
+  } catch { ui.toastError('Submission failed') }
+  finally { submitting.value = false }
+}
+
+const retakeQuiz = () => { quizResult.value = null; answers.value = {} }
+
+const resultFor = (qId) => quizResult.value?.results?.find(r => r.question_id === qId)
 </script>
 
 <template>
@@ -98,6 +138,10 @@ const prev = () => {
               <component :is="isDone(l.id) ? CheckCircle : Circle" :size="16"
                 :color="isDone(l.id) ? 'var(--ma-green)' : 'rgba(255,255,255,.4)'" />
               <span>{{ l.title }}</span>
+            </button>
+            <button class="quiz-btn" @click="openQuiz(mod)">
+              <HelpCircle :size="15" />
+              <span>Module Quiz</span>
             </button>
           </div>
         </div>
@@ -147,6 +191,94 @@ const prev = () => {
         </div>
       </main>
     </div>
+
+    <!-- ── Quiz overlay ── -->
+    <Teleport to="body">
+      <div v-if="quizOpen" class="quiz-overlay" @click.self="quizOpen=false">
+        <div class="quiz-panel">
+          <div class="quiz-header">
+            <div>
+              <h3>{{ quiz?.title || 'Module Quiz' }}</h3>
+              <p class="quiz-sub">{{ quizModuleTitle }} · Pass mark: {{ quiz?.pass_score ?? 70 }}%</p>
+            </div>
+            <button class="quiz-close" @click="quizOpen=false"><X :size="20"/></button>
+          </div>
+
+          <BaseLoader v-if="quizLoading" style="padding:60px"/>
+
+          <!-- No quiz for this module -->
+          <div v-else-if="!quiz" class="quiz-empty">
+            <HelpCircle :size="40" color="rgba(255,255,255,.25)"/>
+            <p>No quiz has been added to this module yet.</p>
+          </div>
+
+          <!-- Result screen -->
+          <div v-else-if="quizResult" class="quiz-result">
+            <div class="result-ring" :class="quizResult.passed ? 'ring-pass' : 'ring-fail'">
+              <span class="result-score">{{ quizResult.score }}%</span>
+            </div>
+            <h3 :style="{color: quizResult.passed ? 'var(--ma-green)' : '#ef4444'}">
+              {{ quizResult.passed ? 'Passed! Masha\'Allah 🎉' : 'Not quite — try again' }}
+            </h3>
+            <p class="result-detail">
+              {{ quizResult.correct_count }}/{{ quizResult.total }} correct ·
+              Pass mark {{ quizResult.pass_score }}%
+            </p>
+
+            <!-- Review answers -->
+            <div class="quiz-review">
+              <div v-for="(q, qi) in quiz.questions" :key="q.id" class="review-q">
+                <div class="review-q-header">
+                  <component
+                    :is="resultFor(q.id)?.correct ? CheckCircle : XCircle"
+                    :size="16"
+                    :color="resultFor(q.id)?.correct ? 'var(--ma-green)' : '#ef4444'"
+                  />
+                  <span>Q{{ qi+1 }}. {{ q.question }}</span>
+                </div>
+                <p class="review-ans" v-if="!resultFor(q.id)?.correct">
+                  Correct answer: <strong>{{ q.options[resultFor(q.id)?.correct_index] }}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div class="quiz-actions">
+              <BaseButton v-if="!quizResult.passed" @click="retakeQuiz">Retake Quiz</BaseButton>
+              <button class="btn btn--outline" @click="quizOpen=false" style="color:#fff;border-color:rgba(255,255,255,.3)">Close</button>
+            </div>
+          </div>
+
+          <!-- Question form -->
+          <div v-else class="quiz-form">
+            <div v-if="quiz.has_passed" class="passed-banner">
+              <CheckCircle :size="15" color="var(--ma-green)"/>
+              You've already passed this quiz (best: {{ quiz.best_score }}%). You can retake it anytime.
+            </div>
+
+            <div v-for="(q, qi) in quiz.questions" :key="q.id" class="quiz-question">
+              <p class="q-text">Q{{ qi+1 }}. {{ q.question }}</p>
+              <label
+                v-for="(opt, oi) in q.options" :key="oi"
+                class="q-option"
+                :class="{ selected: answers[q.id] === oi }"
+              >
+                <input type="radio" :name="`q-${q.id}`" :value="oi" v-model.number="answers[q.id]" />
+                <span>{{ opt }}</span>
+              </label>
+            </div>
+
+            <div class="quiz-actions">
+              <span class="answered-count">
+                {{ Object.keys(answers).length }}/{{ quiz.questions.length }} answered
+              </span>
+              <BaseButton :loading="submitting" :disabled="!allAnswered" @click="submitQuiz">
+                Submit Quiz
+              </BaseButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -177,4 +309,40 @@ const prev = () => {
 .completion-card{max-width:500px;margin:32px auto;background:rgba(240,193,48,.08);border:2px solid var(--ma-gold);border-radius:var(--radius-xl);padding:36px;text-align:center}
 .completion-card h3{font-family:var(--font-heading);color:var(--ma-gold);margin:16px 0 8px}
 .completion-card p{color:rgba(255,255,255,.7)}
+/* Quiz button in sidebar */
+.quiz-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px;margin-top:2px;border-radius:6px;background:rgba(240,193,48,.1);color:var(--ma-gold);font-size:.8rem;font-weight:600;cursor:pointer;border:1px dashed rgba(240,193,48,.35);transition:background var(--trans-fast)}
+.quiz-btn:hover{background:rgba(240,193,48,.2)}
+/* Quiz overlay */
+.quiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.quiz-panel{background:var(--ma-green-dark);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-xl);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;padding:28px;color:#fff}
+.quiz-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.quiz-header h3{font-family:var(--font-heading);font-size:1.2rem;color:#fff}
+.quiz-sub{font-size:.8rem;color:rgba(255,255,255,.55);margin-top:4px}
+.quiz-close{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;padding:4px}
+.quiz-close:hover{color:#fff}
+.quiz-empty{text-align:center;padding:50px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;color:rgba(255,255,255,.55)}
+/* Question form */
+.passed-banner{display:flex;align-items:center;gap:8px;font-size:.82rem;background:rgba(118,196,66,.12);border:1px solid rgba(118,196,66,.3);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:18px;color:rgba(255,255,255,.85)}
+.quiz-question{margin-bottom:22px}
+.q-text{font-weight:600;font-size:.95rem;margin-bottom:10px;color:#fff;line-height:1.5}
+.q-option{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-md);margin-bottom:6px;cursor:pointer;font-size:.88rem;color:rgba(255,255,255,.8);transition:all var(--trans-fast)}
+.q-option:hover{border-color:var(--ma-green);background:rgba(118,196,66,.08)}
+.q-option.selected{border-color:var(--ma-green);background:rgba(118,196,66,.15);color:#fff;font-weight:500}
+.q-option input{accent-color:var(--ma-green)}
+.quiz-actions{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)}
+.answered-count{font-size:.8rem;color:rgba(255,255,255,.55);margin-right:auto}
+/* Result */
+.quiz-result{text-align:center;padding:10px 0}
+.result-ring{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;border:5px solid}
+.ring-pass{border-color:var(--ma-green);background:rgba(118,196,66,.1)}
+.ring-fail{border-color:#ef4444;background:rgba(239,68,68,.1)}
+.result-score{font-family:var(--font-heading);font-size:1.9rem;font-weight:700}
+.quiz-result h3{font-family:var(--font-heading);margin-bottom:6px}
+.result-detail{font-size:.85rem;color:rgba(255,255,255,.6);margin-bottom:22px}
+.quiz-review{text-align:left;background:rgba(255,255,255,.04);border-radius:var(--radius-md);padding:16px;margin-bottom:8px}
+.review-q{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.review-q:last-child{border-bottom:none}
+.review-q-header{display:flex;align-items:flex-start;gap:8px;font-size:.85rem;color:rgba(255,255,255,.85);line-height:1.5}
+.review-ans{font-size:.78rem;color:rgba(255,255,255,.55);margin:4px 0 0 24px}
+.review-ans strong{color:var(--ma-green)}
 </style>

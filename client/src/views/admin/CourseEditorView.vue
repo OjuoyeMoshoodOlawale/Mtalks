@@ -9,7 +9,7 @@ import BaseModal    from '@/components/common/BaseModal.vue'
 import BaseButton   from '@/components/common/BaseButton.vue'
 import BaseInput    from '@/components/common/BaseInput.vue'
 import BaseConfirm  from '@/components/common/BaseConfirm.vue'
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, GripVertical, Video, FileText, Menu } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, GripVertical, Video, FileText, Menu, HelpCircle, X } from 'lucide-vue-next'
 
 const route  = useRoute()
 const ui     = useUiStore()
@@ -78,6 +78,73 @@ const extractDriveId = (input) => {
   const m = input.match(/\/d\/([a-zA-Z0-9_-]+)/)
   if (m) { lesForm.value.drive_file_id = m[1]; ui.toast('Drive ID extracted') }
 }
+
+/* ── Quiz builder ── */
+const quizModal   = ref(false)
+const quizModule  = ref(null)
+const quizLoading = ref(false)
+const quizSaving  = ref(false)
+const quizForm    = ref({ title: '', pass_score: 70, questions: [] })
+
+const blankQuestion = () => ({ question: '', options: ['', '', '', ''], correct_index: 0 })
+
+const openQuizBuilder = async (mod) => {
+  quizModule.value = mod
+  quizModal.value  = true
+  quizLoading.value = true
+  try {
+    const { data } = await api.get(`/evaluations/module/${mod.id}`)
+    if (data.data) {
+      quizForm.value = {
+        title:      data.data.title,
+        pass_score: data.data.pass_score,
+        questions:  data.data.questions.map(q => ({
+          question: q.question, options: [...q.options], correct_index: q.correct_index
+        }))
+      }
+    } else {
+      quizForm.value = { title: `${mod.title} — Quiz`, pass_score: 70, questions: [blankQuestion()] }
+    }
+  } catch { ui.toastError('Failed to load quiz') }
+  finally { quizLoading.value = false }
+}
+
+const addQuestion    = () => quizForm.value.questions.push(blankQuestion())
+const removeQuestion = (qi) => quizForm.value.questions.splice(qi, 1)
+const addOption      = (q)  => q.options.push('')
+const removeOption   = (q, oi) => {
+  q.options.splice(oi, 1)
+  if (q.correct_index >= q.options.length) q.correct_index = 0
+}
+
+const saveQuiz = async () => {
+  const f = quizForm.value
+  if (!f.title.trim())          { ui.toastError('Quiz title is required'); return }
+  if (!f.questions.length)      { ui.toastError('Add at least one question'); return }
+  for (const [i, q] of f.questions.entries()) {
+    if (!q.question.trim())     { ui.toastError(`Question ${i+1} text is empty`); return }
+    const filled = q.options.filter(o => o.trim())
+    if (filled.length < 2)      { ui.toastError(`Question ${i+1} needs at least 2 options`); return }
+    if (!q.options[q.correct_index]?.trim()) { ui.toastError(`Question ${i+1}: correct answer is empty`); return }
+  }
+  quizSaving.value = true
+  try {
+    await api.post('/evaluations', {
+      module_id:  quizModule.value.id,
+      title:      f.title.trim(),
+      pass_score: Number(f.pass_score) || 70,
+      questions:  f.questions.map(q => ({
+        question: q.question.trim(),
+        options:  q.options.filter(o => o.trim()),
+        correct_index: q.options.filter(o => o.trim()).indexOf(q.options[q.correct_index])
+      }))
+    })
+    ui.toast('Quiz saved')
+    quizModal.value = false
+  } catch (e) {
+    ui.toastError(e.response?.data?.message || 'Save failed')
+  } finally { quizSaving.value = false }
+}
 </script>
 
 <template>
@@ -110,6 +177,7 @@ const extractDriveId = (input) => {
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
                   <span style="font-size:.78rem;color:var(--ma-text-muted)">{{ mod.lessons?.length||0 }} lessons</span>
+                  <button @click="openQuizBuilder(mod)" class="action-btn" title="Module quiz"><HelpCircle :size="15"/> Quiz</button>
                   <button @click="openModEdit(mod)" class="action-btn"><Pencil :size="15"/></button>
                   <button @click="delTarget=mod;delType='module';showDel=true" class="action-btn danger"><Trash2 :size="15"/></button>
                   <button @click="openMod=openMod===mi?null:mi" class="action-btn">
@@ -196,6 +264,63 @@ const extractDriveId = (input) => {
     :message="`Delete &quot;${delTarget?.title}&quot;? This cannot be undone.`"
     confirmText="Delete" :danger="true" :loading="deleting"
     @confirm="confirmDelete" @cancel="showDel=false"/>
+
+  <!-- Quiz builder -->
+  <BaseModal v-if="quizModal" :title="`Quiz — ${quizModule?.title}`" size="lg" @close="quizModal=false">
+    <BaseLoader v-if="quizLoading" style="padding:40px"/>
+    <div v-else class="quiz-builder">
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:12px;margin-bottom:18px">
+        <BaseInput v-model="quizForm.title" label="Quiz title" placeholder="Module Quiz" required/>
+        <BaseInput v-model="quizForm.pass_score" label="Pass score (%)" type="number" placeholder="70"/>
+      </div>
+
+      <div v-for="(q, qi) in quizForm.questions" :key="qi" class="quiz-q-card">
+        <div class="quiz-q-header">
+          <span class="quiz-q-num">Q{{ qi+1 }}</span>
+          <button v-if="quizForm.questions.length>1" @click="removeQuestion(qi)" class="action-btn danger" title="Remove question">
+            <Trash2 :size="14"/>
+          </button>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px">
+          <textarea v-model="q.question" class="form-input" rows="2" placeholder="Type the question…"></textarea>
+        </div>
+
+        <div class="quiz-options">
+          <div v-for="(opt, oi) in q.options" :key="oi" class="quiz-opt-row">
+            <input
+              type="radio"
+              :name="`correct-${qi}`"
+              :checked="q.correct_index===oi"
+              @change="q.correct_index=oi"
+              title="Mark as correct answer"
+            />
+            <input
+              v-model="q.options[oi]"
+              class="form-input"
+              :placeholder="`Option ${oi+1}${q.correct_index===oi ? ' (correct)' : ''}`"
+              :class="{ 'opt-correct': q.correct_index===oi }"
+            />
+            <button v-if="q.options.length>2" @click="removeOption(q, oi)" class="action-btn danger" title="Remove option">
+              <X :size="13"/>
+            </button>
+          </div>
+          <button @click="addOption(q)" class="add-opt-btn" v-if="q.options.length<6">
+            <Plus :size="13"/> Add option
+          </button>
+        </div>
+      </div>
+
+      <button @click="addQuestion" class="add-lesson-btn" style="margin-top:4px">
+        <Plus :size="16"/> Add Question
+      </button>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--ma-border)">
+        <button class="btn btn--outline" @click="quizModal=false">Cancel</button>
+        <BaseButton :loading="quizSaving" @click="saveQuiz">Save Quiz</BaseButton>
+      </div>
+    </div>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -218,4 +343,14 @@ const extractDriveId = (input) => {
 .action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;font-size:.78rem;background:var(--ma-white);color:var(--ma-text);border:1px solid var(--ma-border);cursor:pointer;transition:all var(--trans-fast)}
 .action-btn:hover{background:var(--ma-green-tint);color:var(--ma-green-deep);border-color:var(--ma-green)}
 .action-btn.danger:hover{background:#fce8e8;color:#D32F2F;border-color:#D32F2F}
+/* Quiz builder */
+.quiz-q-card{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:16px;margin-bottom:14px}
+.quiz-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.quiz-q-num{font-weight:700;font-size:.85rem;color:var(--ma-green-deep);background:var(--ma-green-tint);padding:2px 10px;border-radius:10px}
+.quiz-options{display:flex;flex-direction:column;gap:8px}
+.quiz-opt-row{display:flex;align-items:center;gap:8px}
+.quiz-opt-row input[type=radio]{accent-color:var(--ma-green);width:16px;height:16px;flex-shrink:0;cursor:pointer}
+.opt-correct{border-color:var(--ma-green) !important;background:#f0fdf4}
+.add-opt-btn{display:inline-flex;align-items:center;gap:4px;font-size:.78rem;color:var(--ma-green-deep);background:none;border:1px dashed var(--ma-border);border-radius:var(--radius-md);padding:6px 12px;cursor:pointer;align-self:flex-start}
+.add-opt-btn:hover{border-color:var(--ma-green);background:var(--ma-green-tint)}
 </style>
