@@ -38,7 +38,7 @@ const submit = async () => {
   loading.value=true
   try {
     // Send to admin email via backend (uses Gmail SMTP)
-    await api.post('/settings/contact', form.value)
+    await api.post('/contacts', form.value)
     sent.value=true; ui.toast('Message sent! We will get back to you soon.')
   } catch {
     // fallback: compose email client

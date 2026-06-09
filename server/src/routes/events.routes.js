@@ -3,6 +3,7 @@ const ctrl   = require('../controllers/events.controller');
 const { verifyToken, requireAdmin, optionalAuth } = require('../middleware/auth');
 
 router.get('/',       optionalAuth, ctrl.getAll);
+router.get('/id/:id', verifyToken, requireAdmin, ctrl.getById);
 router.get('/:slug',  optionalAuth, ctrl.getOne);
 router.post('/',      verifyToken, requireAdmin, ctrl.create);
 router.put('/:id',    verifyToken, requireAdmin, ctrl.update);

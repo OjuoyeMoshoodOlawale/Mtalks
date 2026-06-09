@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
   LayoutDashboard, BookOpen, Calendar, Users, CreditCard,
-  BarChart3, UserCheck, Star, HelpCircle, Settings, Bug, X, LogOut
+  BarChart3, UserCheck, Star, HelpCircle, Settings, Bug, X, LogOut, MessageSquare
 } from 'lucide-vue-next'
 
 const props = defineProps({ open: Boolean })
@@ -22,8 +22,9 @@ const nav = [
   { to: '/admin/team',          icon: UserCheck,        label: 'Team' },
   { to: '/admin/testimonials',  icon: Star,             label: 'Testimonials' },
   { to: '/admin/faqs',          icon: HelpCircle,       label: 'FAQs' },
-  { to: '/admin/settings',      icon: Settings,         label: 'Settings' },
-  { to: '/admin/logs',          icon: Bug,              label: 'Error Logs' },
+  { to: '/admin/settings',      icon: Settings,   label: 'Settings' },
+  { to: '/admin/messages',      icon: MessageSquare, label: 'Messages' },
+  { to: '/admin/logs',          icon: Bug,        label: 'Error Logs' },
 ]
 
 const isActive = (item) => item.exact ? route.path === item.to : route.path.startsWith(item.to)

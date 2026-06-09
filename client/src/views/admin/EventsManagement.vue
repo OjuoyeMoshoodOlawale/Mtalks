@@ -9,7 +9,7 @@ import BaseModal        from '@/components/common/BaseModal.vue'
 import BaseButton       from '@/components/common/BaseButton.vue'
 import BaseInput        from '@/components/common/BaseInput.vue'
 import BaseConfirm      from '@/components/common/BaseConfirm.vue'
-import { Plus, Pencil, Trash2, Eye, EyeOff, Calendar, Menu } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Eye, EyeOff, Calendar, Menu, Users } from 'lucide-vue-next'
 
 const ui          = useUiStore()
 const events      = ref([])
@@ -110,6 +110,7 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric'
                   </td>
                   <td>
                     <div style="display:flex;gap:8px">
+                      <RouterLink :to="`/admin/events/${ev.id}/edit`" class="action-btn"><Users :size="16"/> Attendees</RouterLink>
                       <button @click="openEdit(ev)" class="action-btn"><Pencil :size="16"/> Edit</button>
                       <button @click="editTarget=ev;showDel=true" class="action-btn danger"><Trash2 :size="16"/></button>
                     </div>

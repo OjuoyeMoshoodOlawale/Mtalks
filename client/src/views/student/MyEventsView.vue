@@ -103,9 +103,17 @@ const daysUntil = (d) => {
 
                 <!-- Ticket code block -->
                 <div class="ticket-code-block">
-                  <div class="qr-placeholder">
-                    <QrCode :size="44" color="var(--ma-green-deep)" />
-                    <p>Check email for QR</p>
+                  <div class="qr-wrap">
+                    <img
+                      v-if="r.qr_data"
+                      :src="r.qr_data"
+                      alt="Event QR Code"
+                      class="qr-img"
+                    />
+                    <div v-else class="qr-placeholder">
+                      <QrCode :size="44" color="var(--ma-green-deep)" />
+                      <p>Check email for QR</p>
+                    </div>
                   </div>
                   <div class="ticket-code">{{ r.ticket_code }}</div>
                 </div>
@@ -181,6 +189,8 @@ const daysUntil = (d) => {
 .ticket-meta span{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--ma-text-muted)}
 /* Code block */
 .ticket-code-block{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:120px}
+.qr-wrap{background:var(--ma-green-tint);border-radius:var(--radius-md);padding:8px;display:flex;align-items:center;justify-content:center}
+.qr-img{width:100px;height:100px;display:block;border-radius:4px}
 .qr-placeholder{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px;background:var(--ma-green-tint);border-radius:var(--radius-md)}
 .qr-placeholder p{font-size:.65rem;color:var(--ma-green-deep);text-align:center;max-width:80px}
 .ticket-code{font-family:monospace;font-size:.75rem;background:var(--ma-off-white);border:1px dashed var(--ma-border);padding:5px 10px;border-radius:6px;letter-spacing:.08em;color:var(--ma-green-dark)}

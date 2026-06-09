@@ -44,6 +44,7 @@ const routes = [
   { path: '/admin/faqs',             name: 'AdminFaqs',    component: () => import('@/views/admin/FaqManagement.vue'),        meta: { requiresAdmin: true } },
   { path: '/admin/settings',         name: 'AdminSettings',component: () => import('@/views/admin/SettingsView.vue'),         meta: { requiresAdmin: true } },
   { path: '/admin/logs',             name: 'AdminLogs',    component: () => import('@/views/admin/ErrorLogsView.vue'),        meta: { requiresAdmin: true } },
+  { path: '/admin/messages',         name: 'AdminMessages',component: () => import('@/views/admin/MessagesView.vue'),          meta: { requiresAdmin: true } },
 
   /* ─ 404 ─ */
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/public/NotFoundView.vue') }

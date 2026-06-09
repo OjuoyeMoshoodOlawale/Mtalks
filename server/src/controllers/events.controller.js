@@ -38,6 +38,16 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getById = async (req, res) => {
+  try {
+    const [[event]] = await db.query('SELECT * FROM events WHERE id = ?', [req.params.id]);
+    if (!event) return notFound(res, 'Event not found');
+    const [packages] = await db.query('SELECT * FROM event_packages WHERE event_id = ?', [event.id]);
+    event.packages = packages;
+    return ok(res, event);
+  } catch (err) { return serverErr(res); }
+};
+
 exports.getOne = async (req, res) => {
   try {
     const [[event]] = await db.query('SELECT * FROM events WHERE slug = ?', [req.params.slug]);

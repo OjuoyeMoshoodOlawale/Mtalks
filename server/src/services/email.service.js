@@ -163,4 +163,30 @@ const sendPaymentReceiptEmail = async ({ to, name, amount, reference, descriptio
   });
 };
 
-module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail };
+module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail, sendContactNotification };
+
+/** Contact form notification to admin */
+async function sendContactNotification ({ name, email, subject, message }) {
+  const adminEmail = process.env.GMAIL_USER;
+  if (!adminEmail) return;
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to:   adminEmail,
+    replyTo: email,
+    subject: `[Muhsinah Academy] New Message: ${subject}`,
+    html: base(`
+      <p>A new message has been submitted via the contact form on <strong>muhsinahacademy.com</strong>.</p>
+      <div class="ticket" style="text-align:left">
+        <div class="info"><span class="label">Name</span><span>${name}</span></div>
+        <div class="info"><span class="label">Email</span><span><a href="mailto:${email}" style="color:var(--green)">${email}</a></span></div>
+        <div class="info"><span class="label">Subject</span><span>${subject}</span></div>
+        <div class="info" style="flex-direction:column;gap:6px">
+          <span class="label">Message</span>
+          <span style="white-space:pre-line;background:#f5f7f2;padding:12px;border-radius:6px;font-size:14px">${message}</span>
+        </div>
+      </div>
+      <p style="font-size:13px">You can reply directly to this email to respond to ${name}.</p>
+      <p style="font-size:13px;color:#888">View all messages in your <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/admin/messages" style="color:var(--green)">Admin Panel → Messages</a>.</p>
+    `)
+  });
+}

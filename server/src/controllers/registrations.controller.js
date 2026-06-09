@@ -3,22 +3,38 @@ const { ok, serverErr } = require('../utils/helpers');
 
 exports.getAll = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT er.*, u.name AS student_name, u.email AS student_email,
+    let query = `SELECT er.*, u.name AS student_name, u.email AS student_email,
          ev.title AS event_title, ep.name AS package_name
        FROM event_registrations er
        JOIN users u ON u.id = er.user_id
        JOIN events ev ON ev.id = er.event_id
-       JOIN event_packages ep ON ep.id = er.package_id
-       ORDER BY er.registered_at DESC`);
+       JOIN event_packages ep ON ep.id = er.package_id`;
+    const params = [];
+    if (req.query.event_id) {
+      query += ' WHERE er.event_id = ?';
+      params.push(req.query.event_id);
+    }
+    query += ' ORDER BY er.registered_at DESC';
+    const [rows] = await db.query(query, params);
     return ok(res, rows);
+  } catch (err) { return serverErr(res); }
+};
+
+exports.checkIn = async (req, res) => {
+  try {
+    const [[reg]] = await db.query('SELECT * FROM event_registrations WHERE id = ?', [req.params.id]);
+    if (!reg) return res.status(404).json({ success: false, message: 'Registration not found' });
+    if (reg.attended_at) return ok(res, { message: 'Already checked in' });
+    await db.query('UPDATE event_registrations SET attended_at = NOW() WHERE id = ?', [req.params.id]);
+    return ok(res, { message: 'Checked in successfully' });
   } catch (err) { return serverErr(res); }
 };
 
 exports.getMine = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT er.*, ev.title, ev.banner, ev.type, ev.venue, ev.meeting_link, ev.event_date,
+      `SELECT er.id, er.ticket_code, er.qr_data, er.attended_at, er.registered_at,
+         ev.title, ev.banner, ev.type, ev.venue, ev.meeting_link, ev.event_date,
          ep.name AS package_name, ep.price
        FROM event_registrations er
        JOIN events ev ON ev.id = er.event_id
