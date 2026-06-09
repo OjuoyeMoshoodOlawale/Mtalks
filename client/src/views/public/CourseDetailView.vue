@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useCoursesStore } from '@/stores/courses'
 import { useAuthStore }    from '@/stores/auth'
@@ -11,6 +11,7 @@ import BaseLoader    from '@/components/common/BaseLoader.vue'
 import BaseButton    from '@/components/common/BaseButton.vue'
 import BaseConfirm   from '@/components/common/BaseConfirm.vue'
 import { ChevronDown, ChevronUp, Play, Lock, CheckCircle, BookOpen } from 'lucide-vue-next'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -29,6 +30,18 @@ const enrolled  = computed(() => course.value?.enrolled)
 const price     = computed(() => isFree.value ? 'Free' : `₦${Number(course.value?.price).toLocaleString()}`)
 const totalLessons = computed(() =>
   course.value?.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0)
+
+// Dynamic SEO — updates when course data loads
+watch(course, (c) => {
+  if (!c) return
+  useSeoMeta({
+    title:       c.title,
+    description: c.description?.slice(0, 160) || `Enrol in ${c.title} on Muhsinah Academy`,
+    image:       c.thumbnail,
+    url:         `/courses/${c.slug}`,
+    type:        'article',
+  })
+}, { immediate: true })
 
 const enrol = async () => {
   if (!auth.isLoggedIn) { router.push({ name: 'Login', query: { redirect: route.fullPath } }); return }

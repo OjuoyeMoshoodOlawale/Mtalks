@@ -1,6 +1,15 @@
 <script setup>
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
+
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Privacy Policy & Terms',
+  description: 'Read the Muhsinah Academy privacy policy and terms of service. We are fully compliant with Nigeria's NDPR data protection regulations.',
+  url:         '/legal',
+})
+
 const props = defineProps({ page: String })
 const content = {
   privacy: {

@@ -9,6 +9,15 @@ import BaseInput    from '@/components/common/BaseInput.vue'
 import { Mail, MapPin, MessageCircle, Send, Calendar } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Contact Us',
+  description: 'Get in touch with the Muhsinah Academy team. We are based in Abuja, Nigeria and available via email, WhatsApp, and our online contact form.',
+  url:         '/contact',
+})
+
+
 const ui      = useUiStore()
 const loading = ref(false)
 const sent    = ref(false)

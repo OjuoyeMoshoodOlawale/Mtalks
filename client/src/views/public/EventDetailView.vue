@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore }   from '@/stores/ui'
@@ -10,6 +10,7 @@ import BaseLoader   from '@/components/common/BaseLoader.vue'
 import BaseButton   from '@/components/common/BaseButton.vue'
 import BaseModal    from '@/components/common/BaseModal.vue'
 import { Calendar, MapPin, Monitor, Clock, Users, Tag, CheckCircle, Timer } from 'lucide-vue-next'
+import { useSeoMeta } from '@/composables/useSeoMeta'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -25,6 +26,18 @@ onMounted(async () => {
   try { const { data } = await api.get(`/events/${route.params.slug}`); event.value = data.data }
   finally { loading.value = false }
 })
+
+// Dynamic SEO — updates when event data loads
+watch(event, (e) => {
+  if (!e) return
+  useSeoMeta({
+    title:       e.title,
+    description: e.description?.slice(0, 160) || `Register for ${e.title} — Muhsinah Academy`,
+    image:       e.banner,
+    url:         `/events/${e.slug}`,
+    type:        'article',
+  })
+}, { immediate: true })
 
 const isEarlyBird = (pkg) => pkg.early_bird_price && new Date(pkg.early_bird_deadline) > new Date()
 const pkgPrice    = (pkg) => isEarlyBird(pkg) ? pkg.early_bird_price : pkg.price

@@ -6,6 +6,15 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import { Heart, Star, Award, Shield, BookOpen, Users, Handshake, TrendingUp } from 'lucide-vue-next'
+
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'About Us',
+  description: 'Learn about Coach Madinah Sanni and the story behind Muhsinah Academy — transforming Muslim marriages and relationships across Nigeria since 2014.',
+  url:         '/about',
+})
+
 gsap.registerPlugin(ScrollTrigger)
 
 const values = [

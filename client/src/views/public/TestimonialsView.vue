@@ -6,6 +6,15 @@ import PublicFooter from '@/components/layout/PublicFooter.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import { Star } from 'lucide-vue-next'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Testimonials',
+  description: 'Read real stories from students and couples whose marriages and lives were transformed through Muhsinah Academy programmes.',
+  url:         '/testimonials',
+})
+
+
 const testimonials = ref([]); const loading = ref(true)
 onMounted(async () => { try { const { data } = await api.get('/testimonials'); testimonials.value = data.data } finally { loading.value=false } })
 </script>
@@ -27,7 +36,7 @@ onMounted(async () => { try { const { data } = await api.get('/testimonials'); t
           <div class="stars"><Star v-for="i in t.rating" :key="i" :size="16" fill="var(--ma-gold)" color="var(--ma-gold)"/></div>
           <p class="t-quote">"{{ t.content }}"</p>
           <div class="t-author">
-            <img :src="t.client_photo||'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70&auto=format'" :alt="t.client_name"/>
+            <img loading="lazy" :src="t.client_photo||'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70&auto=format'" :alt="t.client_name"/>
             <strong>{{ t.client_name }}</strong>
           </div>
         </div>

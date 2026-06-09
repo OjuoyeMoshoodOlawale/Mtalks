@@ -8,6 +8,15 @@ import PublicFooter from '@/components/layout/PublicFooter.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import { Calendar, MapPin, Monitor, Tag, Clock, ChevronRight } from 'lucide-vue-next'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Events',
+  description: 'Register for upcoming summits, retreats and workshops by Muhsinah Academy. Transformative live events for couples and singles across Nigeria.',
+  url:         '/events',
+})
+
+
 const events  = ref([])
 const loading = ref(false)
 

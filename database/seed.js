@@ -5,11 +5,17 @@
  * Usage (from project root):
  *   node database/seed.js
  *
- * Requires server deps: cd server && npm install
- * Reads env from:       server/.env  (DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT)
+ * Reads env from: server/.env
  */
 
-require('dotenv').config({ path: './server/.env' });
+// ── Resolve server/node_modules so this runs from project root ──
+const path = require('path');
+const SERVER = path.join(__dirname, '..', 'server');
+process.env.NODE_PATH = path.join(SERVER, 'node_modules');
+require('module').Module._initPaths();
+// ────────────────────────────────────────────────────────────────
+
+require('dotenv').config({ path: path.join(SERVER, '.env') });
 const bcrypt = require('bcryptjs');
 const mysql  = require('mysql2/promise');
 

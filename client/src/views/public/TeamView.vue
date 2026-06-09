@@ -6,6 +6,15 @@ import PublicFooter from '@/components/layout/PublicFooter.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import { Instagram, Linkedin, Twitter } from 'lucide-vue-next'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Our Team',
+  description: 'Meet the passionate coaches and coordinators behind Muhsinah Academy, led by certified marriage coach Madinah Sanni.',
+  url:         '/team',
+})
+
+
 const team    = ref([])
 const loading = ref(true)
 onMounted(async () => { try { const { data } = await api.get('/team'); team.value = data.data } finally { loading.value=false } })
@@ -26,7 +35,7 @@ onMounted(async () => { try { const { data } = await api.get('/team'); team.valu
       <BaseLoader v-if="loading"/>
       <div v-else class="team-grid">
         <div v-for="m in team" :key="m.id" class="team-card">
-          <img :src="m.photo||'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&q=70&auto=format'" :alt="m.name"/>
+          <img loading="lazy" :src="m.photo||'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&q=70&auto=format'" :alt="m.name"/>
           <div class="team-body">
             <h3>{{ m.name }}</h3>
             <p class="team-role">{{ m.role }}</p>

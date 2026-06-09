@@ -6,12 +6,31 @@ import { useUiStore }   from '@/stores/ui'
 import BaseToast from '@/components/common/BaseToast.vue'
 import BaseLoader from '@/components/common/BaseLoader.vue'
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-vue-next'
+import api from '@/services/api'
 
 const auth = useAuthStore()
 const ui   = useUiStore()
 
 onMounted(async () => {
   if (auth.accessToken) await auth.fetchMe()
+
+  // Load Crisp chat widget if website ID is set in admin Settings
+  try {
+    const { data } = await api.get('/settings/public')
+    const raw = Array.isArray(data.data) ? data.data : []
+    const settings = Object.fromEntries(raw.map(s => [s.key, s.value]))
+    const crispId = settings.crisp_website_id
+    if (crispId && crispId.trim()) {
+      window.$crisp = []
+      window.CRISP_WEBSITE_ID = crispId.trim()
+      const s = document.createElement('script')
+      s.src = 'https://client.crisp.chat/l.js'
+      s.async = true
+      document.head.appendChild(s)
+    }
+  } catch {
+    // Crisp is optional — silently skip if settings endpoint fails
+  }
 })
 
 const iconFor = (type) => ({

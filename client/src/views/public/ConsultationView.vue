@@ -5,6 +5,15 @@ import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import { Calendar, Clock, Shield, Video } from 'lucide-vue-next'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Book a Consultation',
+  description: 'Book a private, confidential one-on-one coaching session with Coach Madinah Sanni. Available for individuals and couples.',
+  url:         '/consultation',
+})
+
+
 const calendlyUrl = ref('https://calendly.com/madeenahsanni')
 onMounted(async () => {
   try { const { data } = await api.get('/settings'); if (data.data.calendly_url) calendlyUrl.value = data.data.calendly_url } catch {}

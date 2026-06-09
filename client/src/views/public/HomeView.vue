@@ -7,6 +7,14 @@ import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import HeroCanvas   from '@/components/public/HeroCanvas.vue'
 import {
+
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  description: 'Expert life and marriage coaching by Coach Madinah Sanni. Online courses, live events, and private consultations for Muslim couples and sisters across Nigeria.',
+  url:         '/',
+})
+
   Heart, BookOpen, Calendar, Users, Award, ShieldCheck, Star, ChevronRight,
   Mic2, MessageCircle, Phone
 } from 'lucide-vue-next'

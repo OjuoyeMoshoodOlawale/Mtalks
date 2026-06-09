@@ -4,6 +4,15 @@ import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import { Heart, Users, BookOpen, Mic2, ChevronRight, CheckCircle } from 'lucide-vue-next'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Our Services',
+  description: 'From life coaching to marriage counselling — explore all the professional services offered by Coach Madinah Sanni and the Muhsinah Academy team.',
+  url:         '/services',
+})
+
+
 const services = [
   { icon: Heart, title: 'Marriage Coaching', slug: 'marriage', img: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&q=70&auto=format',
     tagline: 'Rebuild. Reconnect. Renew.',

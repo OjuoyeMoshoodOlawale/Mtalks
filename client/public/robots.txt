@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Block private/auth routes from crawlers
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /forgot-password
+
+# Sitemap
+Sitemap: https://www.muhsinahacademy.com/sitemap.xml

@@ -8,6 +8,15 @@ import PublicFooter from '@/components/layout/PublicFooter.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import { BookOpen, Clock, Users, Lock, Unlock, Search } from 'lucide-vue-next'
 
+import { useSeoMeta } from '@/composables/useSeoMeta'
+
+useSeoMeta({
+  title:       'Online Courses',
+  description: 'Browse our library of life and marriage coaching courses. Free and paid self-paced courses for singles, engaged couples, and married partners.',
+  url:         '/courses',
+})
+
+
 const store   = useCoursesStore()
 const auth    = useAuthStore()
 const search  = ref('')
