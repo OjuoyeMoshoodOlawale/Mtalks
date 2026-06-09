@@ -158,7 +158,7 @@ async function seed() {
     (2,  'Quality Time',                             'DRIVE_ID_007', 16, 4),
     (2,  'Physical Touch',                           'DRIVE_ID_008', 13, 5),
     -- Module 3 (Applying Daily)
-    (3,  'Speaking Your Partner\'s Language',         'DRIVE_ID_009', 18, 1),
+    (3,  'Speaking Your Partner''s Language',         'DRIVE_ID_009', 18, 1),
     (3,  '30-Day Love Language Challenge',            'DRIVE_ID_010', 10, 2),
     -- Module 4 (Before You Say I Do)
     (4,  'Compatibility Assessment Deep-Dive',        'DRIVE_ID_011', 20, 1),
@@ -197,7 +197,7 @@ async function seed() {
     (
       'Muhsinah Marriage Summit 2025',
       'muhsinah-marriage-summit-2025',
-      'Nigeria\'s premier marriage enrichment summit. Join Coach Madinah Sanni and top relationship experts for a transformative 2-day experience. Connect with like-minded couples, gain actionable tools, and leave with a renewed vision for your marriage and family.',
+      'Nigeria''s premier marriage enrichment summit. Join Coach Madinah Sanni and top relationship experts for a transformative 2-day experience. Connect with like-minded couples, gain actionable tools, and leave with a renewed vision for your marriage and family.',
       'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1200',
       'offline',
       'Transcorp Hilton Abuja — Plot 1096 Aguiyi Ironsi Street, Maitama, Abuja',
@@ -207,7 +207,7 @@ async function seed() {
       1
     ),
     (
-      'Couple\'s Retreat Weekend — Abuja 2025',
+      'Couple''s Retreat Weekend — Abuja 2025',
       'couples-retreat-weekend-abuja-2025',
       'An intimate 3-day retreat for couples ready to reconnect, reset and reignite. Limited to 20 couples only. Guided sessions, couples exercises, evening dhikr, and a breathtaking lakeside setting.',
       'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200',
@@ -371,7 +371,7 @@ async function seed() {
     ),
     (
       'What payment methods are accepted?',
-      'We accept all Nigerian debit and credit cards, and bank transfers, through Paystack — Nigeria\'s most trusted payment gateway. All transactions are fully secure and encrypted.',
+      'We accept all Nigerian debit and credit cards, and bank transfers, through Paystack — Nigeria''s most trusted payment gateway. All transactions are fully secure and encrypted.',
       'Payments', 4, 1
     ),
     (
@@ -391,7 +391,7 @@ async function seed() {
     ),
     (
       'Is my personal information kept private?',
-      'Absolutely. We comply fully with Nigeria\'s NDPR data protection regulations. Your information is never sold or shared with any third party. See our full Privacy Policy for complete details.',
+      'Absolutely. We comply fully with Nigeria''s NDPR data protection regulations. Your information is never sold or shared with any third party. See our full Privacy Policy for complete details.',
       'General', 8, 1
     ),
     (
