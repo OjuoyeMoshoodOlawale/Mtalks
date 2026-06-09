@@ -1,12 +1,96 @@
 <script setup>
-import { RouterLink } from "vue-router"
+import { ref, onMounted } from 'vue'
+import api from '@/services/api'
+import { useUiStore } from '@/stores/ui'
+import AdminSidebar from '@/components/layout/AdminSidebar.vue'
+import BaseLoader   from '@/components/common/BaseLoader.vue'
+import BaseModal    from '@/components/common/BaseModal.vue'
+import BaseButton   from '@/components/common/BaseButton.vue'
+import BaseInput    from '@/components/common/BaseInput.vue'
+import BaseConfirm  from '@/components/common/BaseConfirm.vue'
+import { Plus, Pencil, Trash2, Users, Menu } from 'lucide-vue-next'
+
+const ui=useUiStore();const team=ref([]);const loading=ref(true);const sidebarOpen=ref(false)
+const showForm=ref(false);const showDel=ref(false);const saving=ref(false);const deleting=ref(false);const editTarget=ref(null)
+const blank = () => ({ name:'',role:'',bio:'',photo:'',social_links:{instagram:'',linkedin:'',twitter:''} })
+const form = ref(blank())
+
+const fetchAll = async () => { loading.value=true; try { const {data}=await api.get('/team'); team.value=data.data } finally { loading.value=false } }
+onMounted(fetchAll)
+const openCreate = () => { editTarget.value=null; form.value=blank(); showForm.value=true }
+const openEdit   = (m) => { editTarget.value=m; form.value={...m,social_links:m.social_links||{instagram:'',linkedin:'',twitter:''}}; showForm.value=true }
+
+const save = async () => {
+  if (!form.value.name) { ui.toastError('Name required'); return }
+  saving.value=true
+  try {
+    if (editTarget.value) { await api.put(`/team/${editTarget.value.id}`, form.value); ui.toast('Updated') }
+    else { await api.post('/team', form.value); ui.toast('Team member added') }
+    showForm.value=false; fetchAll()
+  } finally { saving.value=false }
+}
+const confirmDel = async () => { deleting.value=true; try { await api.delete(`/team/${editTarget.value.id}`); ui.toast('Removed'); showDel.value=false; fetchAll() } finally { deleting.value=false } }
 </script>
+
 <template>
-  <div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:40px">
-    <div style="text-align:center">
-      <h2 style="font-family:var(--font-heading);color:var(--ma-green-dark)">Coming in Phase 2</h2>
-      <p style="color:var(--ma-text-muted);margin-top:8px">Full implementation in progress</p>
-      <RouterLink to="/" class="btn btn--primary" style="margin-top:24px;display:inline-flex">Back to Home</RouterLink>
+  <div class="admin-layout">
+    <AdminSidebar :open="sidebarOpen" @close="sidebarOpen=false"/>
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <button class="topbar-toggle hide-desktop" @click="sidebarOpen=true"><Menu :size="22"/></button>
+        <h1 class="topbar-title">Team</h1>
+        <BaseButton @click="openCreate" style="margin-left:auto"><Plus :size="16"/> Add Member</BaseButton>
+      </div>
+      <div class="admin-content">
+        <BaseLoader v-if="loading" style="padding:40px"/>
+        <div v-else class="team-grid">
+          <div v-if="!team.length" style="grid-column:1/-1;text-align:center;padding:40px"><Users :size="48" color="var(--ma-border)"/><p style="color:var(--ma-text-muted);margin-top:10px">No team members yet.</p></div>
+          <div v-for="m in team" :key="m.id" class="team-card">
+            <img :src="m.photo||'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=70&auto=format'" :alt="m.name" class="team-photo"/>
+            <div class="team-info">
+              <p style="font-weight:700;color:var(--ma-green-dark);margin:0">{{ m.name }}</p>
+              <p style="font-size:.82rem;color:var(--ma-text-muted);margin:2px 0">{{ m.role }}</p>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:12px">
+              <button @click="openEdit(m)" class="action-btn"><Pencil :size="14"/> Edit</button>
+              <button @click="editTarget=m;showDel=true" class="action-btn danger"><Trash2 :size="14"/></button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+  <BaseModal :title="editTarget?'Edit Member':'New Team Member'" size="lg" @close="showForm=false" v-if="showForm">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <BaseInput v-model="form.name" label="Full name" required style="grid-column:span 2"/>
+      <BaseInput v-model="form.role" label="Role/position" placeholder="Marriage Coach"/>
+      <BaseInput v-model="form.photo" label="Photo URL" placeholder="https://…"/>
+    </div>
+    <div class="form-group"><label class="form-label">Bio</label><textarea v-model="form.bio" class="form-input" rows="3"/></div>
+    <label class="form-label">Social links</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+      <BaseInput v-model="form.social_links.instagram" label="Instagram" placeholder="https://instagram.com/…"/>
+      <BaseInput v-model="form.social_links.linkedin"  label="LinkedIn"  placeholder="https://linkedin.com/in/…"/>
+      <BaseInput v-model="form.social_links.twitter"   label="Twitter/X" placeholder="https://twitter.com/…"/>
+    </div>
+    <template #footer>
+      <BaseButton variant="outline" @click="showForm=false">Cancel</BaseButton>
+      <BaseButton :loading="saving" @click="save">{{ editTarget?'Save':'Add Member' }}</BaseButton>
+    </template>
+  </BaseModal>
+  <BaseConfirm v-if="showDel" title="Remove team member" :message="`Remove ${editTarget?.name}?`" confirmText="Remove" :danger="true" :loading="deleting" @confirm="confirmDel" @cancel="showDel=false"/>
 </template>
+
+<style scoped>
+.admin-layout{display:flex;min-height:100vh}.admin-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.admin-topbar{background:var(--ma-white);border-bottom:1px solid var(--ma-border);padding:0 24px;height:60px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.topbar-toggle{color:var(--ma-text);display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px}.topbar-toggle:hover{background:var(--ma-green-tint)}
+.topbar-title{font-family:var(--font-heading);font-size:1.15rem;color:var(--ma-green-dark);margin:0}
+.admin-content{flex:1;padding:24px;background:var(--ma-off-white);overflow-y:auto}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
+.team-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);padding:20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.team-photo{width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:12px}
+.team-info{flex:1}
+.action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;font-size:.78rem;background:var(--ma-off-white);border:1px solid var(--ma-border);cursor:pointer;transition:all var(--trans-fast)}
+.action-btn:hover{background:var(--ma-green-tint);color:var(--ma-green-deep)}.action-btn.danger:hover{background:#fce8e8;color:#D32F2F;border-color:#D32F2F}
+</style>

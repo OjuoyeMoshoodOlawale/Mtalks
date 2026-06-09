@@ -116,7 +116,7 @@ onMounted(() => {
   <!-- ── WHY CHOOSE US ── -->
   <section class="section section--green">
     <div class="container text-center">
-      <span class="section-tag">Why MTalks</span>
+      <span class="section-tag">Why Muhsinah Academy</span>
       <h2 class="section-title">What Sets Us Apart</h2>
       <div class="grid-4" style="margin-top:40px">
         <div v-for="w in whyUs" :key="w.title" class="why-card reveal">

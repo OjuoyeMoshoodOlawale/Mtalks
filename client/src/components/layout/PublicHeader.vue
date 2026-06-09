@@ -30,7 +30,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
       <!-- Logo -->
       <RouterLink to="/" class="header-logo">
         <span class="logo-icon">M</span>
-        <span class="logo-text">MTalks <em>Academy</em></span>
+        <span class="logo-text">Muhsinah <em>Academy</em></span>
       </RouterLink>
 
       <!-- Desktop nav -->

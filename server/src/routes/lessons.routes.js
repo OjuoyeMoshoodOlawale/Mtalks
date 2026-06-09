@@ -1,11 +1,13 @@
 const router = require('express').Router();
 const ctrl   = require('../controllers/lessons.controller');
-const { verifyToken, requireAdmin, optionalAuth } = require('../middleware/auth');
+const { verifyToken, requireAdmin } = require('../middleware/auth');
 
-// lessons routes — full implementation in controller
-router.get('/',    verifyToken, ctrl.getAll   || ((req,res) => res.json({ success:true, data:[] })));
-router.post('/',   verifyToken, ctrl.create   || ((req,res) => res.json({ success:true, data:{} })));
-router.put('/:id', verifyToken, ctrl.update   || ((req,res) => res.json({ success:true, data:{} })));
-router.delete('/:id', verifyToken, ctrl.remove || ((req,res) => res.json({ success:true, data:{} })));
-
+router.get('/',              verifyToken, ctrl.getAll);
+router.get('/progress',      verifyToken, ctrl.getProgress);
+router.get('/:id',           verifyToken, ctrl.getOne);
+router.post('/',             verifyToken, requireAdmin, ctrl.create);
+router.put('/reorder',       verifyToken, requireAdmin, ctrl.reorder);
+router.put('/:id',           verifyToken, requireAdmin, ctrl.update);
+router.delete('/:id',        verifyToken, requireAdmin, ctrl.remove);
+router.post('/:id/complete', verifyToken, ctrl.complete);
 module.exports = router;

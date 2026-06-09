@@ -1,167 +1,165 @@
+/**
+ * Email Service — Muhsinah Academy
+ * Uses Gmail SMTP via Nodemailer (free)
+ */
 const transporter = require('../config/mailer');
 const { generateQrDataUrl } = require('./ticket.service');
 
-const BRAND_GREEN = '#1D6B1D';
-const BRAND_DARK  = '#0D3B15';
-const BRAND_GOLD  = '#F0C130';
+const BRAND      = 'Muhsinah Academy';
+const SITE_URL   = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
+const MAIL_FROM  = process.env.MAIL_FROM  || '"Muhsinah Academy" <madeenahsanni@gmail.com>';
 
-const baseHtml = (content) => `
-<!DOCTYPE html>
-<html lang="en">
+const GREEN_DARK = '#0D3B15';
+const GREEN      = '#1D6B1D';
+const GREEN_TINT = '#EBF7DC';
+const GOLD       = '#F0C130';
+
+const base = (content) => `
+<!DOCTYPE html><html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${BRAND}</title>
 <style>
-  body{margin:0;padding:0;background:#F5F7F2;font-family:'DM Sans',Arial,sans-serif;color:#1A2B1A}
-  .wrapper{max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E0EDD0}
-  .header{background:${BRAND_DARK};padding:28px 32px;text-align:center}
-  .header img{max-height:50px}
-  .header h1{color:#fff;margin:12px 0 0;font-size:20px;font-weight:600}
+  body{margin:0;padding:0;background:#F5F7F2;font-family:'Segoe UI',Arial,sans-serif;color:#1A2B1A}
+  .wrap{max-width:580px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #D4E8C4}
+  .hdr{background:${GREEN_DARK};padding:28px 32px;text-align:center}
+  .hdr-title{color:#fff;margin:10px 0 0;font-size:20px;font-weight:700;letter-spacing:.5px}
+  .hdr-sub{color:rgba(255,255,255,.6);font-size:13px;margin:4px 0 0}
   .body{padding:32px}
-  .footer{background:${BRAND_GREEN};padding:20px 32px;text-align:center;color:#fff;font-size:12px}
-  .btn{display:inline-block;padding:12px 28px;background:${BRAND_GREEN};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;margin:16px 0}
-  .info-row{display:flex;gap:12px;margin:8px 0;font-size:14px}
-  .label{color:#6B7B6B;min-width:100px}
-  .ticket-box{background:#EBF7DC;border:2px solid ${BRAND_GREEN};border-radius:12px;padding:20px;margin:20px 0;text-align:center}
-  .ticket-code{font-size:22px;font-weight:700;color:${BRAND_DARK};letter-spacing:3px;margin:8px 0}
-  .gold-badge{background:${BRAND_GOLD};color:#000;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  .footer{background:${GREEN};padding:18px 32px;text-align:center;color:rgba(255,255,255,.75);font-size:12px}
+  .btn{display:inline-block;padding:12px 28px;background:${GREEN};color:#fff!important;text-decoration:none;border-radius:8px;font-weight:600;margin:16px 0}
+  .whatsapp-btn{display:inline-block;padding:12px 28px;background:#25D366;color:#fff!important;text-decoration:none;border-radius:8px;font-weight:600;margin:8px 0}
+  .ticket{background:${GREEN_TINT};border:2px solid ${GREEN};border-radius:12px;padding:24px;margin:20px 0;text-align:center}
+  .ticket-code{font-size:22px;font-weight:800;color:${GREEN_DARK};letter-spacing:4px;margin:12px 0;font-family:monospace}
+  .info{display:flex;gap:10px;margin:8px 0;font-size:14px}
+  .label{color:#6B7B6B;min-width:110px;font-weight:600}
+  .gold-badge{background:${GOLD};color:#000;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
+  .whatsapp-box{background:#e8f9f0;border-left:4px solid #25D366;border-radius:8px;padding:16px;margin:20px 0}
 </style>
 </head>
 <body>
-<div class="wrapper">
-  <div class="header">
-    <h1>MTalks Life & Marriage Coaching</h1>
-    <p style="color:#9FE1CB;margin:4px 0 0;font-size:13px">muhsinahacademy.com</p>
+<div class="wrap">
+  <div class="hdr">
+    <div style="font-size:32px;font-weight:900;color:#76C442;letter-spacing:-1px">M</div>
+    <p class="hdr-title">${BRAND}</p>
+    <p class="hdr-sub">muhsinahacademy.com</p>
   </div>
   <div class="body">${content}</div>
   <div class="footer">
-    <p style="margin:0">© ${new Date().getFullYear()} MTalks Life & Marriage Coaching · Abuja, Nigeria</p>
-    <p style="margin:4px 0 0;opacity:.8">madeenahsanni@gmail.com</p>
+    <p style="margin:0">© ${new Date().getFullYear()} Muhsinah Academy · Abuja, Nigeria</p>
+    <p style="margin:4px 0 0;font-size:11px">All sessions are private and confidential</p>
   </div>
 </div>
-</body>
-</html>`;
+</body></html>`;
 
-/** OTP email for email verification / password reset */
+/** OTP for email verification / password reset */
 const sendOtpEmail = async ({ to, name, otp, type }) => {
-  const subject = type === 'verify_email' ? 'Verify your email — MTalks' : 'Reset your password — MTalks';
-  const action  = type === 'verify_email' ? 'verify your email address' : 'reset your password';
-
-  const html = baseHtml(`
-    <p>Hi <strong>${name}</strong>,</p>
-    <p>Use the code below to ${action}. It expires in <strong>15 minutes</strong>.</p>
-    <div class="ticket-box">
-      <p style="margin:0;font-size:13px;color:#6B7B6B">Your verification code</p>
-      <div class="ticket-code">${otp}</div>
-    </div>
-    <p style="font-size:13px;color:#888">If you did not request this, please ignore this email.</p>
-  `);
-
+  const isVerify = type === 'verify_email';
   await transporter.sendMail({
-    from:    `"MTalks Academy" <${process.env.MAIL_FROM || 'noreply@muhsinahacademy.com'}>`,
-    to, subject, html
+    from: MAIL_FROM, to,
+    subject: isVerify ? `Verify your email — ${BRAND}` : `Reset your password — ${BRAND}`,
+    html: base(`
+      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
+      <p>Use this code to ${isVerify ? 'verify your email' : 'reset your password'}. It expires in <strong>15 minutes</strong>.</p>
+      <div class="ticket">
+        <p style="color:#6B7B6B;margin:0 0 8px;font-size:13px">Your verification code</p>
+        <div class="ticket-code">${otp}</div>
+      </div>
+      <p style="font-size:13px;color:#888">If you did not request this, please ignore this email.</p>
+    `)
   });
 };
 
-/** Welcome email after successful registration */
+/** Welcome after successful registration */
 const sendWelcomeEmail = async ({ to, name }) => {
-  const html = baseHtml(`
-    <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-    <p>Welcome to <strong>MTalks Life & Marriage Coaching</strong>. Your account has been verified and you're all set!</p>
-    <p>You can now browse and enrol in courses, register for events, and book a personal consultation with Coach Madinah.</p>
-    <a class="btn" href="${process.env.CLIENT_URL}/courses">Explore Courses</a>
-    <p>JazakAllahu Khairan for joining us.</p>
-  `);
-
   await transporter.sendMail({
-    from: `"MTalks Academy" <${process.env.MAIL_FROM}>`,
-    to,
-    subject: 'Welcome to MTalks Academy',
-    html
+    from: MAIL_FROM, to,
+    subject: `Welcome to ${BRAND}`,
+    html: base(`
+      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
+      <p>Welcome to <strong>${BRAND}</strong>! Your account is now verified and ready.</p>
+      <p>You can now browse courses, register for events, and book a personal consultation with Coach Madinah.</p>
+      <div style="text-align:center"><a href="${SITE_URL}/courses" class="btn">Explore Courses</a></div>
+      <p>JazakAllahu Khairan for joining us. We are honoured to walk this journey with you.</p>
+    `)
   });
 };
 
-/** Course enrolment confirmation */
+/** Course enrolment */
 const sendEnrolmentEmail = async ({ to, name, courseName }) => {
-  const html = baseHtml(`
-    <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-    <p>Your enrolment is confirmed. You now have full access to:</p>
-    <div class="ticket-box">
-      <p style="margin:0;font-size:13px;color:#6B7B6B">Enrolled course</p>
-      <p style="font-size:18px;font-weight:700;color:${BRAND_DARK};margin:8px 0">${courseName}</p>
-    </div>
-    <a class="btn" href="${process.env.CLIENT_URL}/dashboard/courses">Go to My Courses</a>
-    <p style="font-size:13px;color:#888">Learn at your own pace. Your progress is saved automatically.</p>
-  `);
-
   await transporter.sendMail({
-    from: `"MTalks Academy" <${process.env.MAIL_FROM}>`,
-    to,
-    subject: `Enrolled: ${courseName} — MTalks Academy`,
-    html
+    from: MAIL_FROM, to,
+    subject: `Enrolled: ${courseName} — ${BRAND}`,
+    html: base(`
+      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
+      <p>Your enrolment is confirmed! You now have full access to:</p>
+      <div class="ticket">
+        <p style="color:#6B7B6B;margin:0 0 8px;font-size:13px">Enrolled course</p>
+        <p style="font-size:18px;font-weight:700;color:${GREEN_DARK};margin:0">${courseName}</p>
+      </div>
+      <div style="text-align:center"><a href="${SITE_URL}/dashboard/courses" class="btn">Go to My Courses</a></div>
+      <p style="font-size:13px;color:#888">Learn at your own pace — your progress is saved automatically.</p>
+    `)
   });
 };
 
-/** Event ticket email with QR code */
+/** Event ticket with QR code and WhatsApp link */
 const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, whatsappLink }) => {
   const qrDataUrl = await generateQrDataUrl(ticketCode);
+  const dateStr   = new Date(event.event_date).toLocaleDateString('en-NG', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const timeStr = new Date(event.event_date).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+
+  const locationHtml = event.type === 'offline'
+    ? `<div class="info"><span class="label">Venue</span><span>📍 ${event.venue}</span></div>`
+    : `<div class="info"><span class="label">Format</span><span>💻 Online — link in this email</span></div>`;
 
   const whatsappSection = whatsappLink ? `
-    <div style="margin:20px 0;padding:16px;background:#EBF7DC;border-radius:8px;border-left:4px solid ${BRAND_GREEN}">
-      <p style="margin:0 0 8px;font-weight:600;color:${BRAND_DARK}">Join the WhatsApp Group</p>
-      <p style="margin:0;font-size:13px">This link is exclusive to registered participants. Do not share it publicly.</p>
-      <a href="${whatsappLink}" class="btn" style="display:inline-block;margin-top:10px;background:#25D366">Join WhatsApp Group</a>
+    <div class="whatsapp-box">
+      <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">Join the Private WhatsApp Group</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">This link is exclusively for registered participants. Please do not share it publicly.</p>
+      <div style="text-align:center"><a href="${whatsappLink}" class="whatsapp-btn">Join WhatsApp Group</a></div>
     </div>` : '';
 
-  const html = baseHtml(`
-    <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-    <p>Your registration for <strong>${event.title}</strong> is confirmed!</p>
-    <div class="ticket-box">
-      <span class="gold-badge">${packageName}</span>
-      <p style="font-size:18px;font-weight:700;color:${BRAND_DARK};margin:12px 0 4px">${event.title}</p>
-      <p style="margin:4px 0;font-size:13px;color:#6B7B6B">
-        ${new Date(event.event_date).toLocaleDateString('en-NG', { weekday:'long', year:'numeric', month:'long', day:'numeric' })} &nbsp;·&nbsp;
-        ${new Date(event.event_date).toLocaleTimeString('en-NG', { hour:'2-digit', minute:'2-digit' })}
-      </p>
-      ${event.type === 'offline'
-        ? `<p style="margin:4px 0;font-size:13px;color:#6B7B6B">📍 ${event.venue}</p>`
-        : `<p style="margin:4px 0;font-size:13px;color:#6B7B6B">💻 Online — link will be provided</p>`
-      }
-      <img src="${qrDataUrl}" alt="Ticket QR Code" style="width:160px;height:160px;margin:16px auto;display:block"/>
-      <div class="ticket-code">${ticketCode}</div>
-      <p style="margin:4px 0 0;font-size:11px;color:#888">Present this QR code or code at the event entrance</p>
-    </div>
-    ${whatsappSection}
-    <p style="font-size:13px;color:#888">We look forward to seeing you. Barakallahu feekum.</p>
-  `);
-
   await transporter.sendMail({
-    from: `"MTalks Academy" <${process.env.MAIL_FROM}>`,
-    to,
-    subject: `Your Ticket: ${event.title} — MTalks Academy`,
-    html
+    from: MAIL_FROM, to,
+    subject: `Your Ticket: ${event.title} — ${BRAND}`,
+    html: base(`
+      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
+      <p>Your registration is confirmed! Here is your ticket:</p>
+      <div class="ticket">
+        <span class="gold-badge">${packageName}</span>
+        <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
+        <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
+        <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
+        ${locationHtml}
+        <img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>
+        <div class="ticket-code">${ticketCode}</div>
+        <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code at the event entrance</p>
+      </div>
+      ${whatsappSection}
+      <p>We look forward to seeing you. Barakallahu feekum. 🌿</p>
+    `)
   });
 };
 
 /** Payment receipt */
 const sendPaymentReceiptEmail = async ({ to, name, amount, reference, description }) => {
-  const html = baseHtml(`
-    <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-    <p>We have received your payment. Here is your receipt:</p>
-    <div class="ticket-box">
-      <div class="info-row"><span class="label">Description</span><span>${description}</span></div>
-      <div class="info-row"><span class="label">Amount</span><span><strong>₦${Number(amount).toLocaleString()}</strong></span></div>
-      <div class="info-row"><span class="label">Reference</span><span style="font-family:monospace">${reference}</span></div>
-      <div class="info-row"><span class="label">Date</span><span>${new Date().toLocaleDateString('en-NG', {year:'numeric',month:'long',day:'numeric'})}</span></div>
-    </div>
-    <p style="font-size:13px;color:#888">Please keep this reference for your records. JazakAllahu Khairan.</p>
-  `);
-
   await transporter.sendMail({
-    from: `"MTalks Academy" <${process.env.MAIL_FROM}>`,
-    to,
-    subject: `Payment Receipt — MTalks Academy`,
-    html
+    from: MAIL_FROM, to,
+    subject: `Payment Receipt — ${BRAND}`,
+    html: base(`
+      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
+      <p>We have received your payment. Here is your receipt:</p>
+      <div class="ticket" style="text-align:left">
+        <div class="info"><span class="label">Description</span><span>${description}</span></div>
+        <div class="info"><span class="label">Amount</span><span style="font-weight:700;font-size:18px">₦${Number(amount).toLocaleString()}</span></div>
+        <div class="info"><span class="label">Reference</span><span style="font-family:monospace;font-size:13px">${reference}</span></div>
+        <div class="info"><span class="label">Date</span><span>${new Date().toLocaleDateString('en-NG',{year:'numeric',month:'long',day:'numeric'})}</span></div>
+      </div>
+      <p style="font-size:13px;color:#888">Please keep this reference for your records. JazakAllahu Khairan.</p>
+    `)
   });
 };
 

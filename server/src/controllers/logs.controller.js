@@ -1,25 +1,31 @@
 const db     = require('../config/db');
-const { ok, created, badReq, notFound, serverErr, paginate } = require('../utils/helpers');
-const logger = require('../utils/logger');
+const { ok, serverErr, paginate } = require('../utils/helpers');
 
 exports.getAll = async (req, res) => {
+  const { page, perPage, offset, limit } = paginate(req.query);
+  const { route } = req.query;
+  const cond = route ? 'WHERE route LIKE ?' : '';
+  const vals = route ? [`%${route}%`, limit, offset] : [limit, offset];
   try {
-    const [rows] = await db.query('SELECT * FROM logs');
-    return ok(res, rows);
-  } catch (err) {
-    logger.error('logs.getAll', { error: err.message, route: req.originalUrl });
-    return serverErr(res);
-  }
+    const [rows] = await db.query(
+      `SELECT id, route, message, user_id, created_at FROM error_logs ${cond} ORDER BY created_at DESC LIMIT ? OFFSET ?`, vals);
+    const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM error_logs ${cond}`, route ? [`%${route}%`] : []);
+    return ok(res, rows, { pagination: { page, perPage, total } });
+  } catch (err) { return serverErr(res); }
 };
 
-exports.create = async (req, res) => {
-  return created(res, { message: 'logs created (implement me)' });
+exports.getOne = async (req, res) => {
+  try {
+    const [[log]] = await db.query('SELECT * FROM error_logs WHERE id = ?', [req.params.id]);
+    return ok(res, log || null);
+  } catch (err) { return serverErr(res); }
 };
 
-exports.update = async (req, res) => {
-  return ok(res, { message: 'logs updated (implement me)' });
-};
-
+exports.create = async (req, res) => ok(res, {});
+exports.update = async (req, res) => ok(res, {});
 exports.remove = async (req, res) => {
-  return ok(res, { message: 'logs deleted (implement me)' });
+  try {
+    await db.query('DELETE FROM error_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)');
+    return ok(res, { message: 'Old logs purged' });
+  } catch (err) { return serverErr(res); }
 };

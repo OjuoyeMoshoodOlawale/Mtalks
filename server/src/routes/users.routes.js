@@ -1,11 +1,9 @@
 const router = require('express').Router();
 const ctrl   = require('../controllers/users.controller');
-const { verifyToken, requireAdmin, optionalAuth } = require('../middleware/auth');
+const { verifyToken, requireAdmin } = require('../middleware/auth');
 
-// users routes — full implementation in controller
-router.get('/',    verifyToken, ctrl.getAll   || ((req,res) => res.json({ success:true, data:[] })));
-router.post('/',   verifyToken, ctrl.create   || ((req,res) => res.json({ success:true, data:{} })));
-router.put('/:id', verifyToken, ctrl.update   || ((req,res) => res.json({ success:true, data:{} })));
-router.delete('/:id', verifyToken, ctrl.remove || ((req,res) => res.json({ success:true, data:{} })));
-
+router.get('/',               verifyToken, requireAdmin, ctrl.getAll);
+router.get('/:id',            verifyToken, requireAdmin, ctrl.getOne);
+router.put('/:id/role',       verifyToken, requireAdmin, ctrl.updateRole);
+router.put('/:id/toggle',     verifyToken, requireAdmin, ctrl.toggleActive);
 module.exports = router;

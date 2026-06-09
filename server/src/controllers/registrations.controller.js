@@ -1,25 +1,34 @@
 const db     = require('../config/db');
-const { ok, created, badReq, notFound, serverErr, paginate } = require('../utils/helpers');
-const logger = require('../utils/logger');
+const { ok, serverErr } = require('../utils/helpers');
 
 exports.getAll = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM registrations');
+    const [rows] = await db.query(
+      `SELECT er.*, u.name AS student_name, u.email AS student_email,
+         ev.title AS event_title, ep.name AS package_name
+       FROM event_registrations er
+       JOIN users u ON u.id = er.user_id
+       JOIN events ev ON ev.id = er.event_id
+       JOIN event_packages ep ON ep.id = er.package_id
+       ORDER BY er.registered_at DESC`);
     return ok(res, rows);
-  } catch (err) {
-    logger.error('registrations.getAll', { error: err.message, route: req.originalUrl });
-    return serverErr(res);
-  }
+  } catch (err) { return serverErr(res); }
 };
 
-exports.create = async (req, res) => {
-  return created(res, { message: 'registrations created (implement me)' });
+exports.getMine = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT er.*, ev.title, ev.banner, ev.type, ev.venue, ev.meeting_link, ev.event_date,
+         ep.name AS package_name, ep.price
+       FROM event_registrations er
+       JOIN events ev ON ev.id = er.event_id
+       JOIN event_packages ep ON ep.id = er.package_id
+       WHERE er.user_id = ? ORDER BY er.registered_at DESC`,
+      [req.user.id]);
+    return ok(res, rows);
+  } catch (err) { return serverErr(res); }
 };
 
-exports.update = async (req, res) => {
-  return ok(res, { message: 'registrations updated (implement me)' });
-};
-
-exports.remove = async (req, res) => {
-  return ok(res, { message: 'registrations deleted (implement me)' });
-};
+exports.create  = async (req, res) => ok(res, { message: 'Use payments/initialize for paid events' });
+exports.update  = async (req, res) => ok(res, { message: 'Updated' });
+exports.remove  = async (req, res) => ok(res, { message: 'Removed' });

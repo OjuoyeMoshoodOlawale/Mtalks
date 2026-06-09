@@ -217,7 +217,7 @@ CREATE TABLE error_logs (
 
 -- Default settings seed
 INSERT INTO settings (`key`, `value`) VALUES
-  ('site_name',     'MTalks Life & Marriage Coaching'),
+  ('site_name',     'Muhsinah Academy'),
   ('site_tagline',  'Helping Muslim Sisters and Couples Build Stronger, Healthier, and Lasting Relationships.'),
   ('site_email',    'madeenahsanni@gmail.com'),
   ('whatsapp_number', '2348039632700'),

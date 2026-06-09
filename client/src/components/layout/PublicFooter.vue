@@ -9,7 +9,7 @@ import { Mail, Phone, MapPin, Instagram, Facebook, Youtube } from 'lucide-vue-ne
         <div>
           <div class="footer-brand">
             <span class="logo-icon">M</span>
-            <span class="logo-text">MTalks <em>Academy</em></span>
+            <span class="logo-text">Muhsinah <em>Academy</em></span>
           </div>
           <p class="footer-tagline">Helping Muslim Sisters and Couples Build Stronger, Healthier, and Lasting Relationships.</p>
           <div class="footer-social">
@@ -45,8 +45,8 @@ import { Mail, Phone, MapPin, Instagram, Facebook, Youtube } from 'lucide-vue-ne
         </div>
       </div>
       <div class="footer-bottom">
-        <p>© {{ new Date().getFullYear() }} MTalks Life & Marriage Coaching. All rights reserved.</p>
-        <p>Abuja, Nigeria · <a href="https://muhsinahacademy.com">muhsinahacademy.com</a></p>
+        <p>© {{ new Date().getFullYear() }} Muhsinah Academy. All rights reserved.</p>
+        <p>Abuja, Nigeria · <a href="https://www.muhsinahacademy.com">www.muhsinahacademy.com</a></p>
       </div>
     </div>
   </footer>

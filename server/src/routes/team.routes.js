@@ -2,10 +2,8 @@ const router = require('express').Router();
 const ctrl   = require('../controllers/team.controller');
 const { verifyToken, requireAdmin, optionalAuth } = require('../middleware/auth');
 
-// team routes — full implementation in controller
-router.get('/',    verifyToken, ctrl.getAll   || ((req,res) => res.json({ success:true, data:[] })));
-router.post('/',   verifyToken, ctrl.create   || ((req,res) => res.json({ success:true, data:{} })));
-router.put('/:id', verifyToken, ctrl.update   || ((req,res) => res.json({ success:true, data:{} })));
-router.delete('/:id', verifyToken, ctrl.remove || ((req,res) => res.json({ success:true, data:{} })));
-
+router.get('/',       optionalAuth, ctrl.getAll);
+router.post('/',      verifyToken, requireAdmin, ctrl.create);
+router.put('/:id',    verifyToken, requireAdmin, ctrl.update);
+router.delete('/:id', verifyToken, requireAdmin, ctrl.remove);
 module.exports = router;
