@@ -12,6 +12,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
   <div style="background:var(--ma-green-dark);padding:60px 0;color:var(--ma-white)">
     <div class="container text-center">
@@ -44,4 +45,5 @@ onMounted(async () => {
     </div>
   </section>
   <PublicFooter />
+  </div>
 </template>

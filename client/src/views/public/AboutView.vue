@@ -25,6 +25,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
 
   <div class="about-hero">
@@ -101,6 +102,7 @@ onMounted(() => {
   </section>
 
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

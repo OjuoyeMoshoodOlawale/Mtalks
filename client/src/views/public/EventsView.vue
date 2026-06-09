@@ -27,6 +27,7 @@ const lowestPrice = (event) => {
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
   <div class="page-hero">
     <div class="container">
@@ -74,6 +75,7 @@ const lowestPrice = (event) => {
     </div>
   </section>
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

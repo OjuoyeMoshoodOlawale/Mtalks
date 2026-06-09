@@ -12,6 +12,7 @@ onMounted(async () => { try { const { data } = await api.get('/team'); team.valu
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
   <div style="background:var(--ma-green-dark);padding:60px 0;color:var(--ma-white)">
     <div class="container text-center">
@@ -42,6 +43,7 @@ onMounted(async () => { try { const { data } = await api.get('/team'); team.valu
     </div>
   </section>
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

@@ -67,6 +67,7 @@ const confirmEnrol = async () => {
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
 
   <div v-if="store.loading || !course" style="padding:80px 0">
@@ -160,6 +161,7 @@ const confirmEnrol = async () => {
   />
 
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

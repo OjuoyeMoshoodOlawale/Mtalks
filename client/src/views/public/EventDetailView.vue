@@ -60,6 +60,7 @@ const pay = async () => {
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
   <BaseLoader v-if="loading" style="padding:80px 0" />
   <div v-else-if="event">
@@ -133,6 +134,7 @@ const pay = async () => {
     </section>
   </div>
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

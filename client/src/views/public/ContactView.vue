@@ -41,6 +41,7 @@ const submit = async () => {
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
 
   <div style="background:var(--ma-green-dark);padding:60px 0;color:var(--ma-white)">
@@ -117,6 +118,7 @@ const submit = async () => {
   </section>
 
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

@@ -25,6 +25,7 @@ const services = [
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
 
   <div style="background:var(--ma-green-dark);padding:70px 0;color:var(--ma-white)">
@@ -70,6 +71,7 @@ const services = [
   </section>
 
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

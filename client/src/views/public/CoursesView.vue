@@ -30,6 +30,7 @@ const formatPrice = (c) => c.is_free || c.price == 0 ? 'Free' : `₦${Number(c.p
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader />
 
   <div class="page-hero">
@@ -84,6 +85,7 @@ const formatPrice = (c) => c.is_free || c.price == 0 ? 'Free' : `₦${Number(c.p
   </section>
 
   <PublicFooter />
+  </div>
 </template>
 
 <style scoped>

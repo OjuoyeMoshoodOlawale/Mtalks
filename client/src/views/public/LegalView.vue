@@ -16,6 +16,7 @@ const c = content[props.page] || content.privacy
 </script>
 
 <template>
+  <div class="page-view">
   <PublicHeader/>
   <div style="background:var(--ma-green-dark);padding:50px 0;color:var(--ma-white)">
     <div class="container"><h1 style="color:var(--ma-white)">{{ c.title }}</h1></div>
@@ -26,6 +27,7 @@ const c = content[props.page] || content.privacy
     </div>
   </section>
   <PublicFooter/>
+  </div>
 </template>
 
 <style scoped>
