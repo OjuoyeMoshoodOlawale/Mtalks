@@ -16,16 +16,24 @@ const error       = ref('')
 const search      = ref('')
 const filter      = ref('all')  // all | in-progress | completed | not-started
 
+const certificates = ref([])
+
 onMounted(async () => {
   try {
-    const { data } = await api.get('/enrollments/my')
-    enrollments.value = data.data || []
+    const [enrolRes, certRes] = await Promise.all([
+      api.get('/enrollments/my'),
+      api.get('/certificates/my').catch(() => ({ data: { data: [] } }))
+    ])
+    enrollments.value  = enrolRes.data.data || []
+    certificates.value = certRes.data.data || []
   } catch {
     error.value = 'Could not load your courses. Please try again.'
   } finally {
     loading.value = false
   }
 })
+
+const certFor = (title) => certificates.value.find(c => c.course_title === title)
 
 const progress = (e) =>
   e.total_lessons > 0 ? Math.round((e.completed_lessons / e.total_lessons) * 100) : 0
@@ -162,6 +170,17 @@ const inProgressCount  = computed(() => enrollments.value.filter(e => { const p 
                 <ChevronRight :size="14" />
               </span>
             </div>
+
+            <!-- Certificate earned -->
+            <a
+              v-if="certFor(e.title)"
+              :href="`/certificate/${certFor(e.title).cert_code}`"
+              target="_blank"
+              class="cert-link"
+              @click.stop
+            >
+              🎓 View Certificate · {{ certFor(e.title).cert_code }}
+            </a>
           </div>
         </RouterLink>
       </div>
@@ -216,4 +235,6 @@ const inProgressCount  = computed(() => enrollments.value.filter(e => { const p 
 .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:4px}
 .enrolled-date{font-size:.75rem;color:var(--ma-text-muted)}
 .continue-link{display:flex;align-items:center;gap:2px;font-size:.8rem;font-weight:700;color:var(--ma-green-deep)}
+.cert-link{display:block;margin-top:8px;font-size:.75rem;font-weight:700;color:#856900;background:#fff8e1;border:1px solid var(--ma-gold);border-radius:8px;padding:6px 10px;text-align:center;text-decoration:none;transition:background var(--trans-fast)}
+.cert-link:hover{background:var(--ma-gold);color:#3d2f00}
 </style>

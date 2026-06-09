@@ -17,6 +17,8 @@ const routes = [
   { path: '/privacy-policy',name:'Privacy',       component: () => import('@/views/public/LegalView.vue'), props: { page: 'privacy' } },
   { path: '/terms',        name: 'Terms',         component: () => import('@/views/public/LegalView.vue'), props: { page: 'terms' } },
 
+  { path: '/certificate/:code', name: 'Certificate', component: () => import('@/views/public/CertificateView.vue') },
+
   /* ─ Auth ─ */
   { path: '/login',        name: 'Login',         component: () => import('@/views/auth/LoginView.vue'),   meta: { guestOnly: true } },
   { path: '/register',     name: 'Register',      component: () => import('@/views/auth/RegisterView.vue'),meta: { guestOnly: true } },

@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 import {
   LayoutDashboard, BookOpen, Calendar, Users, CreditCard,
   BarChart3, UserCheck, Star, HelpCircle, Settings, Bug, X, LogOut, MessageSquare
@@ -11,6 +12,18 @@ const props = defineProps({ open: Boolean })
 const emit  = defineEmits(['close'])
 const route = useRoute()
 const auth  = useAuthStore()
+
+/* Unread messages badge — polls every 60s */
+const unreadMessages = ref(0)
+let pollTimer = null
+const fetchUnread = async () => {
+  try {
+    const { data } = await api.get('/contacts/unread-count')
+    unreadMessages.value = data.data?.count || 0
+  } catch { /* silent */ }
+}
+onMounted(() => { fetchUnread(); pollTimer = setInterval(fetchUnread, 60000) })
+onUnmounted(() => clearInterval(pollTimer))
 
 const nav = [
   { to: '/admin',               icon: LayoutDashboard, label: 'Dashboard',    exact: true },
@@ -23,7 +36,7 @@ const nav = [
   { to: '/admin/testimonials',  icon: Star,             label: 'Testimonials' },
   { to: '/admin/faqs',          icon: HelpCircle,       label: 'FAQs' },
   { to: '/admin/settings',      icon: Settings,   label: 'Settings' },
-  { to: '/admin/messages',      icon: MessageSquare, label: 'Messages' },
+  { to: '/admin/messages',      icon: MessageSquare, label: 'Messages', badge: true },
   { to: '/admin/logs',          icon: Bug,        label: 'Error Logs' },
 ]
 
@@ -48,6 +61,7 @@ const isActive = (item) => item.exact ? route.path === item.to : route.path.star
       >
         <component :is="item.icon" :size="20" aria-hidden="true" />
         <span>{{ item.label }}</span>
+        <span v-if="item.badge && unreadMessages > 0" class="nav-badge">{{ unreadMessages > 99 ? '99+' : unreadMessages }}</span>
       </RouterLink>
     </nav>
 
@@ -90,4 +104,5 @@ const isActive = (item) => item.exact ? route.path === item.to : route.path.star
 .admin-avatar{width:36px;height:36px;background:var(--ma-green);color:var(--ma-green-dark);font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .logout-btn{color:rgba(255,255,255,.5);padding:8px;border-radius:8px;display:flex;transition:all var(--trans-fast)}
 .logout-btn:hover{background:rgba(255,255,255,.08);color:var(--ma-white)}
+.nav-badge{margin-left:auto;background:var(--ma-gold);color:#3d2f00;font-size:.68rem;font-weight:800;padding:1px 7px;border-radius:10px;min-width:20px;text-align:center}
 </style>

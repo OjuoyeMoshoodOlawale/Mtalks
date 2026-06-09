@@ -238,3 +238,14 @@ INSERT INTO settings (`key`, `value`) VALUES
   ('facebook_url',  ''),
   ('twitter_url',   ''),
   ('youtube_url',   '');
+
+CREATE TABLE certificates (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id     INT UNSIGNED NOT NULL,
+  course_id   INT UNSIGNED NOT NULL,
+  cert_code   VARCHAR(20)  NOT NULL UNIQUE,
+  issued_at   DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_cert (user_id, course_id),
+  FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);

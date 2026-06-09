@@ -105,6 +105,20 @@ const submitQuiz = async () => {
 const retakeQuiz = () => { quizResult.value = null; answers.value = {} }
 
 const resultFor = (qId) => quizResult.value?.results?.find(r => r.question_id === qId)
+
+/* ── Certificate ── */
+const claimingCert = ref(false)
+const claimCertificate = async () => {
+  claimingCert.value = true
+  try {
+    const { data } = await api.post('/certificates/claim', { course_id: course.value.id })
+    const code = data.data.cert_code
+    ui.toast('Certificate issued! 🎓')
+    window.open(`/certificate/${code}`, '_blank')
+  } catch (e) {
+    ui.toastError(e.response?.data?.message || 'Could not issue certificate')
+  } finally { claimingCert.value = false }
+}
 </script>
 
 <template>
@@ -188,6 +202,9 @@ const resultFor = (qId) => quizResult.value?.results?.find(r => r.question_id ==
           <Award :size="48" color="var(--ma-gold)" />
           <h3>Alhamdulillah! You've completed this course.</h3>
           <p>JazakAllahu Khairan for your dedication to growth.</p>
+          <BaseButton :loading="claimingCert" @click="claimCertificate" style="margin-top:18px">
+            <Award :size="16"/> Get My Certificate
+          </BaseButton>
         </div>
       </main>
     </div>
