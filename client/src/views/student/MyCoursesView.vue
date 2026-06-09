@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
+import StudentNav from '@/components/layout/StudentNav.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import { BookOpen, Search, CheckCircle, Clock, ChevronRight, AlertCircle } from 'lucide-vue-next'
 
@@ -52,6 +53,7 @@ const inProgressCount  = computed(() => enrollments.value.filter(e => { const p 
 <template>
   <div class="my-courses-page">
     <PublicHeader />
+    <StudentNav />
 
     <div class="page-hero">
       <div class="container">

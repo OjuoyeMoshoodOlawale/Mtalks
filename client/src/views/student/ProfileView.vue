@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
+import StudentNav from '@/components/layout/StudentNav.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import BaseButton   from '@/components/common/BaseButton.vue'
 import { User, Mail, Lock, CheckCircle, AlertCircle, Shield, Calendar } from 'lucide-vue-next'
@@ -100,6 +101,7 @@ const memberSince = (date) =>
 <template>
   <div class="profile-page">
     <PublicHeader />
+    <StudentNav />
 
     <div class="page-hero">
       <div class="container">

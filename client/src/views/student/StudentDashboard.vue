@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
+import StudentNav from '@/components/layout/StudentNav.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import { BookOpen, Calendar, User, TrendingUp, Award } from 'lucide-vue-next'
 
