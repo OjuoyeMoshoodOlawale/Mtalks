@@ -46,7 +46,11 @@ import { Mail, Phone, MapPin, Instagram, Facebook, Youtube } from 'lucide-vue-ne
       </div>
       <div class="footer-bottom">
         <p>© {{ new Date().getFullYear() }} Muhsinah Academy. All rights reserved.</p>
-        <p>Abuja, Nigeria · <a href="https://www.muhsinahacademy.com">www.muhsinahacademy.com</a></p>
+        <p>
+          Abuja, Nigeria ·
+          <a href="https://www.muhsinahacademy.com">www.muhsinahacademy.com</a>
+          · Built by <a href="https://mtalks.ng" target="_blank" rel="noopener" class="mtalks-credit">MTalks</a>
+        </p>
       </div>
     </div>
   </footer>
@@ -70,4 +74,6 @@ import { Mail, Phone, MapPin, Instagram, Facebook, Youtube } from 'lucide-vue-ne
 .footer-links a:hover{color:var(--ma-green)}
 .footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:20px;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;font-size:.8rem;opacity:.55}
 .footer-bottom a:hover{opacity:1;color:var(--ma-green)}
+.mtalks-credit{color:var(--ma-gold);font-weight:600;opacity:1}
+.mtalks-credit:hover{color:var(--ma-green) !important}
 </style>
