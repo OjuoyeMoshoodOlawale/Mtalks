@@ -7,6 +7,9 @@ import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import HeroCanvas   from '@/components/public/HeroCanvas.vue'
 import {
+  Heart, BookOpen, Calendar, Users, Award, ShieldCheck, Star, ChevronRight,
+  Mic2, MessageCircle, Phone
+} from 'lucide-vue-next'
 
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
@@ -15,9 +18,6 @@ useSeoMeta({
   url:         '/',
 })
 
-  Heart, BookOpen, Calendar, Users, Award, ShieldCheck, Star, ChevronRight,
-  Mic2, MessageCircle, Phone
-} from 'lucide-vue-next'
 
 gsap.registerPlugin(ScrollTrigger)
 
