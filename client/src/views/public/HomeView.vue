@@ -93,7 +93,7 @@ onMounted(() => {
   <div class="home-view">
   <PublicHeader />
 
-  <!-- ── HERO ── -->
+  <!--  HERO  -->
   <section class="hero">
     <HeroCanvas />
     <div class="hero-overlay" />
@@ -120,7 +120,7 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── ABOUT TEASER ── -->
+  <!--  ABOUT TEASER  -->
   <section class="section">
     <div class="container">
       <div class="about-grid">
@@ -142,7 +142,7 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── WHY CHOOSE US ── -->
+  <!--  WHY CHOOSE US  -->
   <section class="section section--green">
     <div class="container text-center">
       <span class="section-tag">Why Muhsinah Academy</span>
@@ -157,7 +157,7 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── SERVICES ── -->
+  <!--  SERVICES  -->
   <section class="section">
     <div class="container">
       <div class="text-center" style="margin-bottom:40px">
@@ -179,7 +179,7 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── TESTIMONIALS ── -->
+  <!--  TESTIMONIALS  -->
   <section class="section section--dark">
     <div class="container text-center">
       <span class="section-tag" style="color:var(--ma-gold)">Testimonials</span>
@@ -197,7 +197,7 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── FAQ ── -->
+  <!--  FAQ  -->
   <section class="section section--tint">
     <div class="container">
       <div class="text-center" style="margin-bottom:36px">
@@ -216,7 +216,7 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── CONTACT CTA ── -->
+  <!--  CONTACT CTA  -->
   <section class="section" style="background:var(--ma-green-tint)">
     <div class="container text-center">
       <span class="section-tag">Get Started</span>

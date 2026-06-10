@@ -119,7 +119,7 @@ const confirmDel = async () => {
                 </td>
                 <td class="td-quote">"{{ item.content?.slice(0, 80) }}{{ item.content?.length > 80 ? '…' : '' }}"</td>
                 <td class="td-center">
-                  <span class="stars">{{ '★'.repeat(item.rating || 5) }}</span>
+                  <span class="stars">{{ ''.repeat(item.rating || 5) }}</span>
                 </td>
                 <td>
                   <span class="table-badge table-badge--grey">{{ item.source || 'manual' }}</span>
@@ -154,7 +154,7 @@ const confirmDel = async () => {
           <div class="form-group">
             <label class="form-label">Rating</label>
             <select v-model="form.rating" class="form-input">
-              <option v-for="n in 5" :key="n" :value="n">{{ n }} ★ — {{ ['','Poor','Fair','Good','Great','Excellent'][n] }}</option>
+              <option v-for="n in 5" :key="n" :value="n">{{ n }}  — {{ ['','Poor','Fair','Good','Great','Excellent'][n] }}</option>
             </select>
           </div>
           <div class="form-group">

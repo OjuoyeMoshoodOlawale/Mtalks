@@ -51,7 +51,7 @@ const print = () => window.print()
       <p>{{ error }}</p>
     </div>
 
-    <!-- ── The certificate ── -->
+    <!--  The certificate  -->
     <div v-else class="cert-frame">
       <div class="cert-inner">
         <div class="cert-border">

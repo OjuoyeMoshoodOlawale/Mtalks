@@ -86,7 +86,7 @@ const pay = async () => {
       amount: Math.round(pkgPrice(selPkg.value) * 100),
       ref:    data.data.reference,
       callback: async () => {
-        ui.toast('Payment confirmed! 🎉 Your ticket has been sent to your email.')
+        ui.toast('Payment confirmed!  Your ticket has been sent to your email.')
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
       },
@@ -177,7 +177,7 @@ const pay = async () => {
                 Pay {{ selPkg ? "₦" + Number(pkgPrice(selPkg)).toLocaleString() : "" }} Now
               </BaseButton>
               <p style="font-size:.75rem;color:var(--ma-text-muted);margin-top:10px;text-align:center">
-                🔒 Secured by Paystack · Your ticket is sent to your email
+                 Secured by Paystack · Your ticket is sent to your email
               </p>
             </div>
           </template>

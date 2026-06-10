@@ -102,7 +102,7 @@ const extractVideoId = (input) => {
   ui.toastError('Could not recognise a Drive or YouTube link')
 }
 
-/* ── Quiz builder ── */
+/*  Quiz builder  */
 const quizModal   = ref(false)
 const quizModule  = ref(null)
 const quizLoading = ref(false)

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
-  /* ─ Public ─ */
+  /*  Public  */
   { path: '/',             name: 'Home',          component: () => import('@/views/public/HomeView.vue') },
   { path: '/about',        name: 'About',         component: () => import('@/views/public/AboutView.vue') },
   { path: '/services',     name: 'Services',      component: () => import('@/views/public/ServicesView.vue') },
@@ -20,20 +20,20 @@ const routes = [
   { path: '/certificate/:code', name: 'Certificate', component: () => import('@/views/public/CertificateView.vue') },
   { path: '/gallery',           name: 'Gallery',     component: () => import('@/views/public/GalleryView.vue') },
 
-  /* ─ Auth ─ */
+  /*  Auth  */
   { path: '/login',        name: 'Login',         component: () => import('@/views/auth/LoginView.vue'),   meta: { guestOnly: true } },
   { path: '/register',     name: 'Register',      component: () => import('@/views/auth/RegisterView.vue'),meta: { guestOnly: true } },
   { path: '/verify-email', name: 'VerifyEmail',   component: () => import('@/views/auth/VerifyEmailView.vue') },
   { path: '/forgot-password',name:'ForgotPass',   component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { guestOnly: true } },
 
-  /* ─ Student ─ */
+  /*  Student  */
   { path: '/dashboard',        name: 'Dashboard',    component: () => import('@/views/student/StudentDashboard.vue'), meta: { requiresAuth: true } },
   { path: '/dashboard/courses',name: 'MyCourses',    component: () => import('@/views/student/MyCoursesView.vue'),   meta: { requiresAuth: true } },
   { path: '/dashboard/courses/:id/learn', name: 'Learn', component: () => import('@/views/student/CoursePlayerView.vue'), meta: { requiresAuth: true } },
   { path: '/dashboard/events', name: 'MyEvents',     component: () => import('@/views/student/MyEventsView.vue'),    meta: { requiresAuth: true } },
   { path: '/dashboard/profile',name: 'Profile',      component: () => import('@/views/student/ProfileView.vue'),     meta: { requiresAuth: true } },
 
-  /* ─ Admin ─ */
+  /*  Admin  */
   { path: '/admin',                  name: 'AdminDash',    component: () => import('@/views/admin/AdminDashboard.vue'),       meta: { requiresAdmin: true } },
   { path: '/admin/courses',          name: 'AdminCourses', component: () => import('@/views/admin/CoursesManagement.vue'),    meta: { requiresAdmin: true } },
   { path: '/admin/courses/:id/edit', name: 'CourseEditor', component: () => import('@/views/admin/CourseEditorView.vue'),     meta: { requiresAdmin: true } },
@@ -51,7 +51,7 @@ const routes = [
   { path: '/admin/muzzamil',         name: 'AdminBot',     component: () => import('@/views/admin/BotKnowledgeView.vue'),      meta: { requiresAdmin: true } },
   { path: '/admin/gallery',          name: 'AdminGallery', component: () => import('@/views/admin/GalleryManagement.vue'),     meta: { requiresAdmin: true } },
 
-  /* ─ 404 ─ */
+  /*  404  */
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/public/NotFoundView.vue') }
 ]
 

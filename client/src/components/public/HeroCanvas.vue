@@ -12,17 +12,17 @@ onMounted(() => {
   const W  = el.clientWidth
   const H  = el.clientHeight
 
-  /* ─── Renderer ─── */
+  /*  Renderer  */
   renderer = new THREE.WebGLRenderer({ canvas: el, alpha: true, antialias: true })
   renderer.setSize(W, H)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
-  /* ─── Scene + Camera ─── */
+  /*  Scene + Camera  */
   scene  = new THREE.Scene()
   camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 200)
   camera.position.set(0, 0, 8)
 
-  /* ─── Particles in a torus shape ─── */
+  /*  Particles in a torus shape  */
   const PARTICLE_COUNT = 3500
   const positions = new Float32Array(PARTICLE_COUNT * 3)
   const colors    = new Float32Array(PARTICLE_COUNT * 3)
@@ -60,7 +60,7 @@ onMounted(() => {
   particleMesh = new THREE.Points(geo, mat)
   scene.add(particleMesh)
 
-  /* ─── Wireframe rings ─── */
+  /*  Wireframe rings  */
   const addRing = (radius, tube, color, opacity) => {
     const rGeo = new THREE.TorusGeometry(radius, tube, 8, 80)
     const rMat = new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity })
@@ -73,16 +73,16 @@ onMounted(() => {
   const ring2 = addRing(3.5, 0.015, 0xF0C130, 0.12)
   ring2.rotation.x = Math.PI / 3
 
-  /* ─── Ambient light for depth ─── */
+  /*  Ambient light for depth  */
   scene.add(new THREE.AmbientLight(0x76C442, .5))
 
-  /* ─── GSAP entrance ─── */
+  /*  GSAP entrance  */
   particleMesh.scale.set(0, 0, 0)
   particleMesh.material.opacity = 0
   gsap.to(particleMesh.scale, { x: 1, y: 1, z: 1, duration: 1.8, ease: 'power3.out', delay: .3 })
   gsap.to(particleMesh.material, { opacity: .85, duration: 2, ease: 'power2.out', delay: .3 })
 
-  /* ─── Mouse parallax ─── */
+  /*  Mouse parallax  */
   const mouse = { x: 0, y: 0 }
   const onMouseMove = (e) => {
     mouse.x = (e.clientX / window.innerWidth  - .5) * 2
@@ -90,7 +90,7 @@ onMounted(() => {
   }
   window.addEventListener('mousemove', onMouseMove)
 
-  /* ─── Resize ─── */
+  /*  Resize  */
   const onResize = () => {
     const W = el.clientWidth, H = el.clientHeight
     camera.aspect = W / H
@@ -99,7 +99,7 @@ onMounted(() => {
   }
   window.addEventListener('resize', onResize)
 
-  /* ─── Animation loop ─── */
+  /*  Animation loop  */
   const clock = new THREE.Clock()
   const animate = () => {
     animId = requestAnimationFrame(animate)

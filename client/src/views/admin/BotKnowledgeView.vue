@@ -60,7 +60,7 @@ async function save () {
       ui.toast('Knowledge updated')
     } else {
       await api.post('/bot/knowledge', f)
-      ui.toast('Knowledge added — Muzzamil just got smarter! ✨')
+      ui.toast('Knowledge added — Muzzamil just got smarter! ')
     }
     showForm.value = false
     fetchAll()
@@ -119,7 +119,7 @@ async function runTest () {
 
         <!-- Live test -->
         <div class="test-card">
-          <p class="test-title">🧪 Test Muzzamil</p>
+          <p class="test-title"> Test Muzzamil</p>
           <form class="test-row" @submit.prevent="runTest">
             <input v-model="testInput" class="form-input" placeholder="Type a question a visitor might ask…" style="flex:1"/>
             <BaseButton :loading="testing" type="submit"><Send :size="14"/> Test</BaseButton>

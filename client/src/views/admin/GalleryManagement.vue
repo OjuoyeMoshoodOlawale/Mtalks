@@ -8,7 +8,7 @@ import BaseInput    from '@/components/common/BaseInput.vue'
 import BaseConfirm  from '@/components/common/BaseConfirm.vue'
 import api from '@/services/api'
 import { useUiStore } from '@/stores/ui'
-import { Menu, Plus, Pencil, Trash2, Image, Eye, EyeOff } from 'lucide-vue-next'
+import { Menu, Plus, Pencil, Trash2, Image, Eye, EyeOff, FolderOpen, Loader } from 'lucide-vue-next'
 
 const ui = useUiStore()
 const sidebarOpen = ref(false)
@@ -86,7 +86,7 @@ async function importFolder () {
   try {
     const { data } = await api.post('/gallery/import-folder', folderForm.value)
     const result = data.data
-    ui.toast(`${result.imported} images imported from folder! 🎉`)
+    ui.toast(`${result.imported} images imported from folder! `)
     showFolderImport.value = false
     folderForm.value = { folder_url: '', category: 'General', title_prefix: '' }
     fetchAll()
@@ -106,7 +106,7 @@ async function importFolder () {
         <h1 class="topbar-title">Gallery</h1>
         <div style="display:flex;gap:8px;margin-left:auto">
           <button class="btn btn--outline btn--sm" @click="showFolderImport=true" title="Import entire Drive folder">
-            📁 Import Folder
+             Import Folder
           </button>
           <BaseButton @click="showAdd=true"><Plus :size="16"/> Add Images</BaseButton>
         </div>
@@ -181,10 +181,10 @@ async function importFolder () {
       </div>
 
       <div v-if="!importing" class="folder-preview-note">
-        📸 All image files in the folder will be imported. Non-image files are skipped automatically.
+         All image files in the folder will be imported. Non-image files are skipped automatically.
       </div>
       <div v-else class="folder-importing">
-        <span class="spin">⏳</span> Fetching images from Drive — please wait…
+        <span class="spin"></span> Fetching images from Drive — please wait…
       </div>
 
       <template #footer>

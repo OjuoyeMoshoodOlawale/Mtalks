@@ -18,8 +18,8 @@ const auth   = useAuthStore()
         <!-- Big 404 -->
         <div class="nf-number">404</div>
 
-        <div class="nf-leaf nf-leaf--1">🌿</div>
-        <div class="nf-leaf nf-leaf--2">🍃</div>
+        <div class="nf-leaf nf-leaf--1"></div>
+        <div class="nf-leaf nf-leaf--2"></div>
 
         <h1 class="nf-title">Page Not Found</h1>
         <p class="nf-subtitle">

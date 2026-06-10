@@ -37,7 +37,7 @@ async function checkIn (att) {
   try {
     await api.patch(`/registrations/${att.id}/checkin`)
     att.attended_at = new Date().toISOString()
-    ui.toast(`${att.student_name} checked in ✓`)
+    ui.toast(`${att.student_name} checked in`)
   } catch { ui.toastError('Check-in failed') }
   finally { checkingIn.value = null }
 }
@@ -175,7 +175,7 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric',m
                   <td>{{ fmtDate(a.registered_at) }}</td>
                   <td>
                     <span class="badge" :class="a.attended_at ? 'badge--green' : 'badge--gold'">
-                      {{ a.attended_at ? `✓ ${fmtDate(a.attended_at)}` : 'Pending' }}
+                      {{ a.attended_at ? `${fmtDate(a.attended_at)}` : 'Pending' }}
                     </span>
                   </td>
                   <td>

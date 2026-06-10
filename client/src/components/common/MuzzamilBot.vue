@@ -11,7 +11,7 @@ const chatBody = ref(null)
 const messages = ref([
   {
     from: 'bot',
-    text: "Assalamu alaikum! 🌿 I'm Muzzamil, your Muhsinah Academy assistant. Ask me about courses, events, consultations, payments, or certificates!"
+    text: "Assalamu alaikum!  I'm Muzzamil, your Muhsinah Academy assistant. Ask me about courses, events, consultations, payments, or certificates!"
   }
 ])
 

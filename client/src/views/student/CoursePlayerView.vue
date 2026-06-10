@@ -85,7 +85,7 @@ const prev = () => {
   if (idx > 0) select(flatLessons.value[idx - 1])
 }
 
-/* ── Module quiz ── */
+/*  Module quiz  */
 const quizOpen     = ref(false)
 const quiz         = ref(null)
 const quizLoading  = ref(false)
@@ -116,7 +116,7 @@ const submitQuiz = async () => {
   try {
     const { data } = await api.post(`/evaluations/${quiz.value.id}/submit`, { answers: answers.value })
     quizResult.value = data.data
-    if (data.data.passed) ui.toast(`Passed with ${data.data.score}%! 🎉`)
+    if (data.data.passed) ui.toast(`Passed with ${data.data.score}%! `)
   } catch { ui.toastError('Submission failed') }
   finally { submitting.value = false }
 }
@@ -125,14 +125,14 @@ const retakeQuiz = () => { quizResult.value = null; answers.value = {} }
 
 const resultFor = (qId) => quizResult.value?.results?.find(r => r.question_id === qId)
 
-/* ── Certificate ── */
+/*  Certificate  */
 const claimingCert = ref(false)
 const claimCertificate = async () => {
   claimingCert.value = true
   try {
     const { data } = await api.post('/certificates/claim', { course_id: course.value.id })
     const code = data.data.cert_code
-    ui.toast('Certificate issued! 🎓')
+    ui.toast('Certificate issued! ')
     window.open(`/certificate/${code}`, '_blank')
   } catch (e) {
     ui.toastError(e.response?.data?.message || 'Could not issue certificate')
@@ -246,7 +246,7 @@ const claimCertificate = async () => {
       </main>
     </div>
 
-    <!-- ── Quiz overlay ── -->
+    <!--  Quiz overlay  -->
     <Teleport to="body">
       <div v-if="quizOpen" class="quiz-overlay" @click.self="quizOpen=false">
         <div class="quiz-panel">
@@ -272,7 +272,7 @@ const claimCertificate = async () => {
               <span class="result-score">{{ quizResult.score }}%</span>
             </div>
             <h3 :style="{color: quizResult.passed ? 'var(--ma-green)' : '#ef4444'}">
-              {{ quizResult.passed ? 'Passed! Masha\'Allah 🎉' : 'Not quite — try again' }}
+              {{ quizResult.passed ? 'Passed! Masha\'Allah ' : 'Not quite — try again' }}
             </h3>
             <p class="result-detail">
               {{ quizResult.correct_count }}/{{ quizResult.total }} correct ·

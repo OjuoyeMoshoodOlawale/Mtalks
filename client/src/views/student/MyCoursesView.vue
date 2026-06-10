@@ -144,7 +144,7 @@ const inProgressCount  = computed(() => enrollments.value.filter(e => { const p 
               :alt="e.title"
             />
             <span class="status-badge" :class="`status-badge--${statusLabel(e)}`">
-              {{ statusLabel(e) === 'completed' ? '✓ Completed' : statusLabel(e) === 'in-progress' ? 'In Progress' : 'Not Started' }}
+              {{ statusLabel(e) === 'completed' ? 'Completed' : statusLabel(e) === 'in-progress' ? 'In Progress' : 'Not Started' }}
             </span>
           </div>
 
@@ -179,7 +179,7 @@ const inProgressCount  = computed(() => enrollments.value.filter(e => { const p 
               class="cert-link"
               @click.stop
             >
-              🎓 View Certificate · {{ certFor(e.title).cert_code }}
+               View Certificate · {{ certFor(e.title).cert_code }}
             </a>
           </div>
         </RouterLink>

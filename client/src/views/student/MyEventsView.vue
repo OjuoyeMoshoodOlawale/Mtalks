@@ -120,7 +120,7 @@ const daysUntil = (d) => {
               </div>
 
               <div class="ticket-actions">
-                <span class="attended-badge" v-if="r.attended_at">✓ Attended</span>
+                <span class="attended-badge" v-if="r.attended_at">Attended</span>
                 <RouterLink to="/events" class="btn btn--outline btn--sm">
                   View Event <ChevronRight :size="14" />
                 </RouterLink>
@@ -148,7 +148,7 @@ const daysUntil = (d) => {
                 </div>
                 <div class="ticket-code-block past-code">
                   <div class="ticket-code">{{ r.ticket_code }}</div>
-                  <span class="attended-badge" v-if="r.attended_at">✓ Attended</span>
+                  <span class="attended-badge" v-if="r.attended_at">Attended</span>
                   <span class="missed-badge" v-else>Not attended</span>
                 </div>
               </div>

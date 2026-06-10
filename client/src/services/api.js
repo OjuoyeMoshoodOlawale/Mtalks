@@ -15,14 +15,14 @@ const getStore = async () => {
   return _store
 }
 
-/* ── Request: attach token ── */
+/*  Request: attach token  */
 api.interceptors.request.use(async (config) => {
   const store = await getStore()
   if (store.accessToken) config.headers.Authorization = `Bearer ${store.accessToken}`
   return config
 })
 
-/* ── Response: handle 401 with token refresh ──
+/*  Response: handle 401 with token refresh 
  * ONLY retry requests that are NOT auth endpoints themselves.
  * Retrying /auth/login or /auth/refresh would cause an infinite loop.
  */

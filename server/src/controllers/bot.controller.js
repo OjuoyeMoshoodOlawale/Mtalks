@@ -2,7 +2,7 @@ const db = require('../config/db');
 const { ok, badReq, serverErr } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
-/* ── Matching engine ──
+/*  Matching engine 
  * Scores each knowledge entry by how many of its keywords appear in the
  * user's message. FAQs are also searched as a secondary knowledge source.
  */
@@ -56,7 +56,7 @@ exports.ask = async (req, res) => {
 
     // 3. Default fallback
     return ok(res, {
-      answer: "I'm not sure about that one yet! 🤲 You can ask me about our courses, events, consultations, payments, or certificates. For anything else, please use the Contact page and our team will respond personally.",
+      answer: "I'm not sure about that one yet!  You can ask me about our courses, events, consultations, payments, or certificates. For anything else, please use the Contact page and our team will respond personally.",
       topic: null,
       source: 'fallback'
     });
@@ -66,7 +66,7 @@ exports.ask = async (req, res) => {
   }
 };
 
-/* ── Admin knowledge CRUD ── */
+/*  Admin knowledge CRUD  */
 
 /* GET /api/bot/knowledge */
 exports.getAll = async (req, res) => {

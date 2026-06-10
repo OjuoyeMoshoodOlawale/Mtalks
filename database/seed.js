@@ -1,19 +1,10 @@
 /**
- * Muhsinah Academy — Demo Seed Script
- * Parent company: MTalks
- *
- * Usage (from project root):
- *   node database/seed.js
- *
- * Reads env from: server/.env
- */
-
-// ── Resolve server/node_modules so this runs from project root ──
+//  Resolve server/node_modules so this runs from project root 
 const path = require('path');
 const SERVER = path.join(__dirname, '..', 'server');
 process.env.NODE_PATH = path.join(SERVER, 'node_modules');
 require('module').Module._initPaths();
-// ────────────────────────────────────────────────────────────────
+// 
 
 require('dotenv').config({ path: path.join(SERVER, '.env') });
 const bcrypt = require('bcryptjs');
@@ -28,12 +19,12 @@ const DB = {
   multipleStatements: true,
 };
 
-/* ═══════════════════════════════════════════════════════════════ */
+/*  */
 async function seed() {
   const c = await mysql.createConnection(DB);
-  console.log(`\n✅  Connected → ${DB.database}\n`);
+  console.log(`\n  Connected → ${DB.database}\n`);
 
-  /* ── 1. CLEAR (safe FK order) ─────────────────────────────── */
+  /*  1. CLEAR (safe FK order)  */
   await c.query(`
     SET FOREIGN_KEY_CHECKS = 0;
     TRUNCATE lesson_progress;
@@ -63,9 +54,9 @@ async function seed() {
     TRUNCATE bot_knowledge;
     SET FOREIGN_KEY_CHECKS = 1;
   `);
-  console.log('🗑️   Tables cleared');
+  console.log('   Tables cleared');
 
-  /* ── 2. USERS ─────────────────────────────────────────────── */
+  /*  2. USERS  */
   const [adminHash, studentHash] = await Promise.all([
     bcrypt.hash('Admin@1234',   10),
     bcrypt.hash('Student@1234', 10),
@@ -79,9 +70,9 @@ async function seed() {
      ('Zainab Usman',      'zainab.usman@demo.com',      ?, 'student', 1, 1)`,
     [adminHash, studentHash, studentHash, studentHash]
   );
-  console.log('👤  Users seeded (4)');
+  console.log('  Users seeded (4)');
 
-  /* ── 3. COURSES ───────────────────────────────────────────── */
+  /*  3. COURSES  */
   await c.query(`
     INSERT INTO courses (title, slug, description, thumbnail, price, is_free, is_published) VALUES
     (
@@ -120,9 +111,9 @@ async function seed() {
       20000.00, 0, 1
     );
   `);
-  console.log('📚  Courses seeded (5)');
+  console.log('  Courses seeded (5)');
 
-  /* ── 4. MODULES ───────────────────────────────────────────── */
+  /*  4. MODULES  */
   await c.query(`
     INSERT INTO modules (course_id, title, sort_order) VALUES
     -- Course 1: Understanding Your Love Language (free)
@@ -142,9 +133,184 @@ async function seed() {
     (5, 'What Marriage Should Feel Like',          1),
     (5, 'Resolving Conflict the Right Way',        2);
   `);
-  console.log('📦  Modules seeded (11)');
+  console.log('  Modules seeded (11)');
 
-  /* ── 5. LESSONS ───────────────────────────────────────────── */
+  /*  5. LESSONS  */
+  // All real, public YouTube lectures (video_type = 'youtube')
+  await c.query(`
+    INSERT INTO lessons (module_id, title, drive_file_id, video_type, duration_min, sort_order) VALUES
+    -- Module 1: Foundations of Love in Islam (Nafisa's Pearlz playlist)
+    (1,  'Introduction — Who Is This Course For?',           'SO5_XmzR5NM', 'youtube', 8,  1),
+    (1,  'Best Advice Before Marriage In Islam',              'zgr-2o5nLMA', 'youtube', 18, 2),
+    (1,  'Who To Marry — Understanding the Quran',           'rdemznPM1S0', 'youtube', 22, 3),
+    -- Module 2: What Your Spouse Truly Needs
+    (2,  'Red Flags and Green Flags in Marriage',             'ZC-u7e9XugE', 'youtube', 28, 1),
+    (2,  'Breaking the Anxious Attachment Cycle — Part 2',   'I8XQCATpsh8', 'youtube', 20, 2),
+    -- Module 3: Before You Say I Do
+    (3,  'What Every Muslim Girl Needs Before Getting Married','ODqbIFAF8oQ', 'youtube', 14, 1),
+    (3,  'Best Advice Before Marriage In Islam',              'zgr-2o5nLMA', 'youtube', 18, 2),
+    -- Module 4: Building Your Marriage on Solid Ground
+    (4,  'Marriage and Relationships — Mufti Menk Part 1',    'JEi4FwFvFUg', 'youtube', 55, 1),
+    (4,  'Marriage and Relationships — Mufti Menk Part 2',    'q9D5kxnYuQo', 'youtube', 50, 2),
+    -- Module 5: Marriage in a Changing World
+    (5,  'Marriage in a Changing World — Mufti Menk',         's920tt771bY', 'youtube', 40, 1),
+    -- Module 6: Inner Peace and Self-Regulation
+    (6,  'Break FREE From Toxic Relationships Forever',        '9tBE1HLVyDw', 'youtube', 18, 1),
+    (6,  'Attaining Inner Peace During Hardships — Yasmin Mogahed', 'lthemAddZeI', 'youtube', 48, 2),
+    -- Module 7: Guarding and Growing Your Heart
+    (7,  'Leaving a Toxic Relationship — When to Walk Away',  'SxbHHFy0Hf0', 'youtube', 16, 1),
+    (7,  'Nourishing and Protecting Your Heart — Yasmin Mogahed', 'P0s1PKcVbuo', 'youtube', 45, 2),
+    -- Module 8: Understanding the Broken Heart
+    (8,  'You Will Find Love Again — Healing After Heartbreak', 'LvU4ahsh2TQ', 'youtube', 22, 1),
+    (8,  'How Do You Deal With Heartbreak? — Yasmin Mogahed', 'Eo4M7DKCM10', 'youtube', 12, 2),
+    -- Module 9: The Journey Back to Wholeness
+    (9,  'How To Transform a Broken Heart — Yasmin Mogahed', 'fjx96n-PaAk', 'youtube', 50, 1),
+    (9,  'Healing a Broken Heart — Yasmin Mogahed',           'G_Y8kZa53WI', 'youtube', 25, 2),
+    -- Module 10: What Marriage Should Feel Like
+    (10, 'Challenging Your Spouse with Islam — Nouman Ali Khan', 'o2jojfX8AHI', 'youtube', 16, 1),
+    -- Module 11: Resolving Conflict the Right Way
+    (11, 'Issues in Marriage — Mufti Menk',                   'Lyk_ggupqfk', 'youtube', 35, 1),
+    (11, 'How To Save Your Marriage — Mufti Menk',            'H3pEWpqUhFM', 'youtube', 30, 2);
+  `);
+  console.log('   Lessons seeded (21 — Nafisa Pearlz + Mufti Menk + Yasmin Mogahed + Nouman Ali Khan)');
+
+//  Resolve server/node_modules so this runs from project root 
+const path = require('path');
+const SERVER = path.join(__dirname, '..', 'server');
+process.env.NODE_PATH = path.join(SERVER, 'node_modules');
+require('module').Module._initPaths();
+// 
+
+require('dotenv').config({ path: path.join(SERVER, '.env') });
+const bcrypt = require('bcryptjs');
+const mysql  = require('mysql2/promise');
+
+const DB = {
+  host:               process.env.DB_HOST || 'localhost',
+  port:               parseInt(process.env.DB_PORT) || 3306,
+  user:               process.env.DB_USER || 'root',
+  password:           process.env.DB_PASS || '',
+  database:           process.env.DB_NAME || 'mtalks_db',
+  multipleStatements: true,
+};
+
+/*  */
+async function seed() {
+  const c = await mysql.createConnection(DB);
+  console.log(`\n  Connected → ${DB.database}\n`);
+
+  /*  1. CLEAR (safe FK order)  */
+  await c.query(`
+    SET FOREIGN_KEY_CHECKS = 0;
+    TRUNCATE lesson_progress;
+    TRUNCATE eval_attempts;
+    TRUNCATE eval_questions;
+    TRUNCATE evaluations;
+    TRUNCATE enrollments;
+    TRUNCATE event_registrations;
+    TRUNCATE payments;
+    TRUNCATE lessons;
+    TRUNCATE modules;
+    TRUNCATE courses;
+    TRUNCATE event_packages;
+    TRUNCATE events;
+    TRUNCATE team_members;
+    TRUNCATE testimonials;
+    TRUNCATE faqs;
+    TRUNCATE otp_tokens;
+    TRUNCATE users;
+    CREATE TABLE IF NOT EXISTS contacts (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(150) NOT NULL, subject VARCHAR(200) NOT NULL, message TEXT NOT NULL, is_read TINYINT(1) DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS certificates (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT UNSIGNED NOT NULL, course_id INT UNSIGNED NOT NULL, cert_code VARCHAR(20) NOT NULL UNIQUE, issued_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_cert (user_id, course_id));
+    CREATE TABLE IF NOT EXISTS gallery_images (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, title VARCHAR(200), drive_file_id VARCHAR(100) NOT NULL, category VARCHAR(100) DEFAULT 'General', sort_order INT DEFAULT 0, is_published TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+    TRUNCATE gallery_images;
+    CREATE TABLE IF NOT EXISTS bot_knowledge (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, topic VARCHAR(150) NOT NULL, keywords VARCHAR(500) NOT NULL, answer TEXT NOT NULL, is_active TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+    TRUNCATE contacts;
+    TRUNCATE certificates;
+    TRUNCATE bot_knowledge;
+    SET FOREIGN_KEY_CHECKS = 1;
+  `);
+  console.log('   Tables cleared');
+
+  /*  2. USERS  */
+  const [adminHash, studentHash] = await Promise.all([
+    bcrypt.hash('Admin@1234',   10),
+    bcrypt.hash('Student@1234', 10),
+  ]);
+
+  await c.query(
+    `INSERT INTO users (name, email, password, role, is_verified, is_active) VALUES
+     ('Madinah Sanni',     'admin@muhsinahacademy.com',  ?, 'admin',   1, 1),
+     ('Aisha Ibrahim',     'aisha.ibrahim@demo.com',     ?, 'student', 1, 1),
+     ('Fatimah Abdullahi', 'fatimah.abdullahi@demo.com', ?, 'student', 1, 1),
+     ('Zainab Usman',      'zainab.usman@demo.com',      ?, 'student', 1, 1)`,
+    [adminHash, studentHash, studentHash, studentHash]
+  );
+  console.log('  Users seeded (4)');
+
+  /*  3. COURSES  */
+  await c.query(`
+    INSERT INTO courses (title, slug, description, thumbnail, price, is_free, is_published) VALUES
+    (
+      'Understanding Your Love Language',
+      'understanding-your-love-language',
+      'Discover the 5 love languages and how they shape every relationship. This course helps you communicate love more effectively to your spouse, family, and friends — and finally feel truly understood.',
+      'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800',
+      0.00, 1, 1
+    ),
+    (
+      'Marriage Foundation Masterclass',
+      'marriage-foundation-masterclass',
+      'Build an unshakeable marriage from the ground up. Covers compatibility, communication patterns, conflict resolution, financial partnership, and building a shared vision as a couple.',
+      'https://images.unsplash.com/photo-1529634806980-85c3dd6d34ac?w=800',
+      25000.00, 0, 1
+    ),
+    (
+      'Emotional Intelligence for Couples',
+      'emotional-intelligence-for-couples',
+      'Learn to identify, understand and regulate emotions within your relationship. Emotional intelligence is the hidden key to lasting love, deep connection, and a peaceful home.',
+      'https://images.unsplash.com/photo-1474552226712-ac0f0961a954?w=800',
+      15000.00, 0, 1
+    ),
+    (
+      'Healing After Heartbreak',
+      'healing-after-heartbreak',
+      'A guided journey through grief, rejection and emotional recovery. This free course helps you heal completely and rebuild your confidence before stepping into your next chapter.',
+      'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=800',
+      0.00, 1, 1
+    ),
+    (
+      'Communication in Marriage',
+      'communication-in-marriage',
+      'Master the art of difficult conversations, active listening, and expressing needs without conflict. Communication is the lifeblood of every successful marriage.',
+      'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800',
+      20000.00, 0, 1
+    );
+  `);
+  console.log('  Courses seeded (5)');
+
+  /*  4. MODULES  */
+  await c.query(`
+    INSERT INTO modules (course_id, title, sort_order) VALUES
+    -- Course 1: Understanding Your Love Language (free)
+    (1, 'Foundations of Love in Islam',            1),
+    (1, 'What Your Spouse Truly Needs',            2),
+    -- Course 2: Marriage Foundation Masterclass (paid)
+    (2, 'Before You Say I Do',                     1),
+    (2, 'Building Your Marriage on Solid Ground',  2),
+    (2, 'Marriage in a Changing World',            3),
+    -- Course 3: Emotional Intelligence for Couples (paid)
+    (3, 'Inner Peace and Self-Regulation',         1),
+    (3, 'Guarding and Growing Your Heart',         2),
+    -- Course 4: Healing After Heartbreak (free)
+    (4, 'Understanding the Broken Heart',          1),
+    (4, 'The Journey Back to Wholeness',           2),
+    -- Course 5: Communication in Marriage (paid)
+    (5, 'What Marriage Should Feel Like',          1),
+    (5, 'Resolving Conflict the Right Way',        2);
+  `);
+  console.log('  Modules seeded (11)');
+
+  /*  5. LESSONS  */
   // All real, public YouTube lectures (video_type = 'youtube')
   await c.query(`
     INSERT INTO lessons (module_id, title, drive_file_id, video_type, duration_min, sort_order) VALUES
@@ -181,9 +347,9 @@ async function seed() {
     (11, 'Issues in Marriage — Mufti Menk',                              'Lyk_ggupqfk', 'youtube', 35, 1),
     (11, 'How To Save Your Marriage — Mufti Menk',                       'H3pEWpqUhFM', 'youtube', 30, 2);
   `);
-  console.log('🎬  Lessons seeded (21 — all real YouTube lectures)');
+  console.log('  Lessons seeded (21 — all real YouTube lectures)');
 
-  /* ── 6. EVENTS ────────────────────────────────────────────── */
+  /*  6. EVENTS  */
   await c.query(`
     INSERT INTO events
       (title, slug, description, banner, type, venue,
@@ -214,9 +380,9 @@ async function seed() {
       1
     );
   `);
-  console.log('🎪  Events seeded (2)');
+  console.log('  Events seeded (2)');
 
-  /* ── 7. EVENT PACKAGES ────────────────────────────────────── */
+  /*  7. EVENT PACKAGES  */
   await c.query(`
     INSERT INTO event_packages
       (event_id, name, description, price, early_bird_price,
@@ -258,9 +424,9 @@ async function seed() {
       '["3 nights private suite","All meals included","All retreat sessions","Couples spa session","Premium gift box"]'
     );
   `);
-  console.log('🎟️   Event packages seeded (5)');
+  console.log('   Event packages seeded (5)');
 
-  /* ── 8. TEAM MEMBERS ──────────────────────────────────────── */
+  /*  8. TEAM MEMBERS  */
   await c.query(`
     INSERT INTO team_members (name, role, bio, photo, social_links, sort_order, is_active)
     VALUES
@@ -289,9 +455,9 @@ async function seed() {
       3, 1
     );
   `);
-  console.log('👥  Team seeded (3)');
+  console.log('  Team seeded (3)');
 
-  /* ── 9. TESTIMONIALS ──────────────────────────────────────── */
+  /*  9. TESTIMONIALS  */
   await c.query(`
     INSERT INTO testimonials (client_name, client_photo, content, rating, source, is_published)
     VALUES
@@ -344,9 +510,9 @@ async function seed() {
       5, 'manual', 1
     );
   `);
-  console.log('⭐  Testimonials seeded (8)');
+  console.log('  Testimonials seeded (8)');
 
-  /* ── 10. FAQs ─────────────────────────────────────────────── */
+  /*  10. FAQs  */
   await c.query(`
     INSERT INTO faqs (question, answer, category, sort_order, is_published) VALUES
     (
@@ -400,9 +566,9 @@ async function seed() {
       'Events', 10, 1
     );
   `);
-  console.log('❓  FAQs seeded (10)');
+  console.log('  FAQs seeded (10)');
 
-  /* ── 11. SETTINGS (upsert — schema already has defaults) ──── */
+  /*  11. SETTINGS (upsert — schema already has defaults)  */
   await c.query(`
     INSERT INTO settings (\`key\`, \`value\`) VALUES
       ('site_name',       'Muhsinah Academy'),
@@ -419,9 +585,9 @@ async function seed() {
       ('site_address',    'Abuja, Nigeria')
     ON DUPLICATE KEY UPDATE \`value\` = VALUES(\`value\`);
   `);
-  console.log('⚙️   Settings seeded');
+  console.log('   Settings seeded');
 
-  /* ── 12. DEMO ENROLLMENTS (free courses auto-enrolled) ─────── */
+  /*  12. DEMO ENROLLMENTS (free courses auto-enrolled)  */
   await c.query(`
     INSERT IGNORE INTO enrollments (user_id, course_id, enrolled_at) VALUES
     (2, 1, DATE_SUB(NOW(), INTERVAL 10 DAY)),
@@ -430,9 +596,9 @@ async function seed() {
     (3, 4, DATE_SUB(NOW(), INTERVAL 6  DAY)),
     (4, 4, DATE_SUB(NOW(), INTERVAL 5  DAY));
   `);
-  console.log('📝  Enrollments seeded (5 free)');
+  console.log('  Enrollments seeded (5 free)');
 
-  /* ── 13. DEMO PAYMENTS (paid course + event) ──────────────── */
+  /*  13. DEMO PAYMENTS (paid course + event)  */
   const now = Date.now();
   await c.query(`
     INSERT INTO payments (user_id, type, item_id, amount, reference, status, paid_at) VALUES
@@ -447,17 +613,17 @@ async function seed() {
     (3, 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
     (4, 3, DATE_SUB(NOW(), INTERVAL 1 DAY));
   `);
-  console.log('💳  Payments seeded (4)');
+  console.log('  Payments seeded (4)');
 
-  /* ── 13b. DEMO EVENT REGISTRATIONS (tickets) ─────────────── */
+  /*  13b. DEMO EVENT REGISTRATIONS (tickets)  */
   await c.query(`
     INSERT INTO event_registrations (user_id, event_id, package_id, ticket_code, registered_at) VALUES
     (2, 1, 1, 'DEMOTICKETAISHA1', DATE_SUB(NOW(), INTERVAL 7 DAY)),
     (3, 1, 2, 'DEMOTICKETFATIM1', DATE_SUB(NOW(), INTERVAL 12 DAY));
   `);
-  console.log('🎫  Event registrations seeded (2)');
+  console.log('  Event registrations seeded (2)');
 
-  /* ── 14. DEMO LESSON PROGRESS ─────────────────────────────── */
+  /*  14. DEMO LESSON PROGRESS  */
   // Aisha has finished 3 lessons of course 1
   await c.query(`
     INSERT IGNORE INTO lesson_progress (user_id, lesson_id, completed_at) VALUES
@@ -465,10 +631,10 @@ async function seed() {
     (2, 2, DATE_SUB(NOW(), INTERVAL 8 DAY)),
     (2, 3, DATE_SUB(NOW(), INTERVAL 7 DAY));
   `);
-  console.log('📊  Lesson progress seeded');
+  console.log('  Lesson progress seeded');
 
 
-  /* ── DEMO CONTACTS ──────────────────────────────────────────── */
+  /*  DEMO CONTACTS  */
   await c.query(`
     INSERT INTO contacts (name, email, subject, message, is_read, created_at) VALUES
     ('Amina Yusuf',   'amina.yusuf@demo.com',  'Course enquiry',          'Assalamu alaikum. I would like to know if the Marriage Foundation Masterclass is suitable for someone who is newly married (6 months). JazakAllahu khayran.',  0, DATE_SUB(NOW(), INTERVAL 2  DAY)),
@@ -476,12 +642,12 @@ async function seed() {
     ('Fatima Sule',   'fatima.sule@demo.com',  'Refund request',          'Good day. I paid for the Emotional Intelligence course but I made a mistake and paid twice. Please can you help me with a refund for the duplicate payment.', 1, DATE_SUB(NOW(), INTERVAL 10 DAY)),
     ('Dr Rasheed',    'rasheed.md@demo.com',   'Partnership opportunity',  'Assalamu alaikum Coach Madinah. I am a family therapist based in Lagos and I would love to explore a possible collaboration on corporate marriage wellness programmes.', 1, DATE_SUB(NOW(), INTERVAL 15 DAY));
   `);
-  console.log('📩  Demo contacts seeded (4)');
-  /* ── 15. MUZZAMIL BOT KNOWLEDGE ───────────────────────────── */
+  console.log('  Demo contacts seeded (4)');
+  /*  15. MUZZAMIL BOT KNOWLEDGE  */
   await c.query(`
     INSERT INTO bot_knowledge (topic, keywords, answer) VALUES
     ('Greeting', 'hello,hi,salam,assalamu,hey,good morning,good afternoon,good evening',
-     'Wa alaikum salam! 🌿 I''m Muzzamil, your Muhsinah Academy assistant. I can help you with courses, events, consultations, payments, and more. What would you like to know?'),
+     'Wa alaikum salam!  I''m Muzzamil, your Muhsinah Academy assistant. I can help you with courses, events, consultations, payments, and more. What would you like to know?'),
     ('Courses', 'course,courses,learn,lesson,class,study,enrol,enroll',
      'We offer self-paced online courses on marriage, relationships, and personal growth — some free, some paid. Browse them at the Courses page. Once enrolled, you get lifetime access!'),
     ('Events', 'event,events,summit,retreat,workshop,ticket,seminar',
@@ -497,30 +663,30 @@ async function seed() {
     ('About', 'about,who,madinah,sanni,founder,academy,muhsinah',
      'Muhsinah Academy was founded by Coach Madinah Sanni, a certified life and marriage coach with over 10 years of experience. Learn more on our About page!');
   `);
-  console.log('🤖  Muzzamil knowledge seeded (8)');
+  console.log('  Muzzamil knowledge seeded (8)');
 
   await c.end();
 
-  /* ── SUMMARY ──────────────────────────────────────────────── */
+  /*  SUMMARY  */
   console.log(`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🎉  Muhsinah Academy seed complete!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    Muhsinah Academy seed complete!
+
 
   ADMIN LOGIN
-  ───────────
+  
   Email    →  admin@muhsinahacademy.com
   Password →  Admin@1234
   Role     →  admin
 
   DEMO STUDENTS
-  ─────────────
+  
   aisha.ibrahim@demo.com     /  Student@1234
   fatimah.abdullahi@demo.com /  Student@1234
   zainab.usman@demo.com      /  Student@1234
 
   SEEDED DATA
-  ───────────
+  
   5  courses  (2 free, 3 paid)
   11 modules
   21 lessons (real public YouTube lectures)
@@ -531,12 +697,14 @@ async function seed() {
   7  demo enrollments
   4  demo payments
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   `);
 }
 
 seed().catch(err => {
-  console.error('\n❌  Seed failed:', err.message);
+  console.error('\n  Seed failed:', err.message);
   console.error(err.stack);
   process.exit(1);
 });
+
+}
