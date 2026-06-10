@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore }   from '@/stores/ui'
 import api from '@/services/api'
@@ -54,15 +54,12 @@ watch(event, (e) => {
 const isEarlyBird = (pkg) => pkg.early_bird_price && new Date(pkg.early_bird_deadline) > new Date()
 const pkgPrice    = (pkg) => isEarlyBird(pkg) ? pkg.early_bird_price : pkg.price
 
+/* Guest form state — shown when user is not logged in */
+const guestMode  = ref(false)
+const guestName  = ref('')
+const guestEmail = ref('')
+
 const pay = async () => {
-  if (!auth.isLoggedIn) {
-    /* Preserve the selected package in the redirect URL so it's auto-selected on return */
-    const redirectPath = selPkg.value
-      ? `${route.path}?pkg=${selPkg.value.id}`
-      : route.path
-    router.push({ name: 'Login', query: { redirect: redirectPath } })
-    return
-  }
   if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
   const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
@@ -74,6 +71,17 @@ const pay = async () => {
     ui.toastError('Payment script is loading. Please wait a moment and try again.')
     return
   }
+
+  /* If not logged in, use guest checkout */
+  if (!auth.isLoggedIn) {
+    if (!guestName.value.trim() || !guestEmail.value.trim()) {
+      guestMode.value = true
+      return
+    }
+    await payAsGuest()
+    return
+  }
+  if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
   paying.value = true
   try {
@@ -89,6 +97,39 @@ const pay = async () => {
         ui.toast('Payment confirmed!  Your ticket has been sent to your email.')
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
+      },
+      onClose: () => { ui.toastError('Payment was cancelled.') }
+    }).openIframe()
+  } catch (e) {
+    const msg = e.response?.data?.message || e.message || 'Payment failed. Please try again.'
+    ui.toastError(msg)
+  } finally { paying.value = false }
+}
+
+const payAsGuest = async () => {
+  if (!guestName.value.trim())   { ui.toastError('Please enter your full name'); return }
+  if (!guestEmail.value.trim())  { ui.toastError('Please enter your email address'); return }
+  if (!guestEmail.value.includes('@')) { ui.toastError('Please enter a valid email address'); return }
+
+  paying.value = true
+  try {
+    const { data } = await api.post('/payments/initialize-guest', {
+      guest_name:  guestName.value.trim(),
+      guest_email: guestEmail.value.trim().toLowerCase(),
+      event_id:    event.value.id,
+      package_id:  selPkg.value.id,
+    })
+    const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
+    window.PaystackPop.setup({
+      key:    paystackKey,
+      email:  guestEmail.value.trim().toLowerCase(),
+      amount: Math.round(pkgPrice(selPkg.value) * 100),
+      ref:    data.data.reference,
+      callback: async () => {
+        ui.toast('Payment confirmed! Your ticket has been sent to ' + guestEmail.value)
+        const res = await api.get(`/events/${route.params.slug}`)
+        event.value = res.data.data
+        guestMode.value = false
       },
       onClose: () => { ui.toastError('Payment was cancelled.') }
     }).openIframe()
@@ -209,6 +250,9 @@ const pay = async () => {
 .pkg-desc{font-size:.82rem;color:var(--ma-text-muted);margin-top:8px;line-height:1.5}
 .pkg-deadline{display:flex;align-items:center;gap:4px;font-size:.75rem;color:#7A5F00;margin-top:8px}
 .early-bird-badge{position:absolute;top:-10px;right:10px;background:var(--ma-gold);color:#000;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
+.guest-form{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px}
+.guest-form-title{font-size:.82rem;font-weight:700;color:var(--ma-green-dark);margin-bottom:10px}
+.guest-hint{font-size:.72rem;color:var(--ma-text-muted);margin-top:4px}
 .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
 .reg-pkg-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid var(--ma-border);border-radius:var(--radius-md);cursor:pointer;transition:all .15s}
 .reg-pkg-option.selected{border-color:var(--ma-green);background:var(--ma-green-tint)}
@@ -221,7 +265,10 @@ const pay = async () => {
 .register-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);padding:28px;position:sticky;top:80px;box-shadow:var(--shadow-md)}
 .packages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 @media(max-width:960px){
-  .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
+  .guest-form{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px}
+.guest-form-title{font-size:.82rem;font-weight:700;color:var(--ma-green-dark);margin-bottom:10px}
+.guest-hint{font-size:.72rem;color:var(--ma-text-muted);margin-top:4px}
+.reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
 .reg-pkg-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid var(--ma-border);border-radius:var(--radius-md);cursor:pointer;transition:all .15s}
 .reg-pkg-option.selected{border-color:var(--ma-green);background:var(--ma-green-tint)}
 .reg-pkg-info{flex:1}

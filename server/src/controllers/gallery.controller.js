@@ -67,8 +67,8 @@ exports.remove = async (req, res) => {
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * POST /api/gallery/import-folder
- * Import all images from a shared Google Drive folder in one click.
- * Requires GOOGLE_API_KEY in server/.env and the folder shared as "Anyone with link".
+ * Import all images from a publicly shared Google Drive folder — no API key needed.
+ * The folder must be shared as "Anyone with the link → Viewer".
  * ───────────────────────────────────────────────────────────────────────────── */
 exports.importFolder = async (req, res) => {
   const { folder_url, category, title_prefix } = req.body;

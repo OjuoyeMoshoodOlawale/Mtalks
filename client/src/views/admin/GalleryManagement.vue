@@ -148,12 +148,11 @@ async function importFolder () {
     <!-- Folder import modal -->
     <BaseModal v-if="showFolderImport" title="Import from Drive Folder" size="lg" @close="showFolderImport=false">
       <div class="folder-setup-steps">
-        <p class="setup-title">Before importing, make sure:</p>
-        <ol class="setup-list">
-          <li>Your Drive folder is shared as <strong>"Anyone with the link → Viewer"</strong></li>
-          <li><code>GOOGLE_API_KEY</code> is set in <code>server/.env</code> <span class="setup-hint">(see .env.example for setup guide)</span></li>
-          <li>The Drive API is enabled in your Google Cloud project</li>
-        </ol>
+        <p class="setup-step">
+          In Google Drive, right-click your image folder &rarr;
+          <strong>Share &rarr; "Anyone with the link" &rarr; Viewer &rarr; Copy link</strong>.
+          Paste the link below. No API key or Google account needed.
+        </p>
       </div>
 
       <div class="form-group">

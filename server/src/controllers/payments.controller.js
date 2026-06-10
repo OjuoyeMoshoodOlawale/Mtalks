@@ -76,6 +76,50 @@ exports.initialize = async (req, res) => {
   }
 };
 
+/* ── Guest Event Payment Initialize (no login required) ── */
+exports.initializeGuestEvent = async (req, res) => {
+  const { guest_name, guest_email, event_id, package_id } = req.body;
+
+  if (!guest_name?.trim())                   return badReq(res, 'Your full name is required');
+  if (!guest_email || !/\S+@\S+\.\S+/.test(guest_email)) return badReq(res, 'A valid email address is required');
+  if (!event_id || !package_id)              return badReq(res, 'Event and package are required');
+
+  const paystackConfigured = process.env.PAYSTACK_SECRET_KEY && !process.env.PAYSTACK_SECRET_KEY.includes('xxxx');
+  if (!paystackConfigured) return badReq(res, 'Payment is not configured. Please contact the administrator.');
+
+  try {
+    const [[pkg]] = await db.query(
+      'SELECT ep.*, e.title AS event_title, e.id AS event_id, e.is_published FROM event_packages ep JOIN events e ON e.id = ep.event_id WHERE ep.id = ? AND e.id = ?',
+      [package_id, event_id]);
+    if (!pkg)              return badReq(res, 'Package not found');
+    if (!pkg.is_published) return badReq(res, 'This event is not available');
+
+    const earlyBirdActive = pkg.early_bird_price && new Date(pkg.early_bird_deadline) > new Date();
+    const amount          = earlyBirdActive ? pkg.early_bird_price : pkg.price;
+
+    const reference = `MA-GUEST-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+
+    await db.query(
+      `INSERT INTO payments (user_id, guest_name, guest_email, type, item_id, amount, reference, status, metadata)
+       VALUES (NULL, ?, ?, 'event', ?, ?, ?, 'pending', ?)`,
+      [guest_name.trim(), guest_email.trim().toLowerCase(), event_id, amount, reference,
+       JSON.stringify({ package_id, guest: true })]
+    );
+
+    const txn = await initializeTransaction({
+      email:    guest_email.trim().toLowerCase(),
+      amount,
+      reference,
+      metadata: { guest_name, guest_email, event_id, package_id, type: 'event-guest' }
+    });
+
+    return created(res, { authorization_url: txn.authorization_url, reference, amount });
+  } catch (err) {
+    logger.error('payments.initializeGuestEvent', { error: err.message });
+    return serverErr(res, err, 'Guest payment initialization failed');
+  }
+};
+
 /* ── Paystack Webhook ── */
 exports.webhook = async (req, res) => {
   const signature = req.headers['x-paystack-signature'];
@@ -106,8 +150,13 @@ exports.webhook = async (req, res) => {
     );
 
     const [[user]] = await db.query('SELECT id, name, email FROM users WHERE id = ?', [payment.user_id]);
+    /* For guests, derive name/email from payment record */
+    const recipientName  = user?.name  || payment.guest_name  || 'Valued Guest';
+    const recipientEmail = user?.email || payment.guest_email;
+    if (!recipientEmail) return; // can't send ticket without email
 
     if (payment.type === 'course') {
+      if (!payment.user_id) return; // courses require an account
       const [[existing]] = await db.query(
         'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
         [payment.user_id, payment.item_id]
@@ -118,34 +167,45 @@ exports.webhook = async (req, res) => {
           [payment.user_id, payment.item_id, payment.id]
         );
         const [[course]] = await db.query('SELECT title FROM courses WHERE id = ?', [payment.item_id]);
-        await sendEnrolmentEmail({ to: user.email, name: user.name, courseName: course?.title });
+        await sendEnrolmentEmail({ to: recipientEmail, name: recipientName, courseName: course?.title });
       }
     }
 
     if (payment.type === 'event') {
       const meta = JSON.parse(payment.metadata || '{}');
-      const [[existing]] = await db.query(
-        'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
-        [payment.user_id, payment.item_id]
-      );
+      /* Check for existing registration — for guests match by email; for users by user_id */
+      let existing;
+      if (payment.user_id) {
+        [[existing]] = await db.query(
+          'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
+          [payment.user_id, payment.item_id]);
+      } else {
+        [[existing]] = await db.query(
+          'SELECT id FROM event_registrations WHERE guest_email = ? AND event_id = ?',
+          [payment.guest_email, payment.item_id]);
+      }
+
       if (!existing) {
         const ticketCode = generateTicketCode();
         const [[pkg]]   = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id]);
         const [[ev]]    = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
 
         await db.query(
-          'INSERT INTO event_registrations (user_id, event_id, package_id, payment_id, ticket_code) VALUES (?, ?, ?, ?, ?)',
-          [payment.user_id, payment.item_id, meta.package_id, payment.id, ticketCode]
+          `INSERT INTO event_registrations
+           (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [payment.user_id || null, payment.guest_name, payment.guest_email,
+           payment.item_id, meta.package_id, payment.id, ticketCode]
         );
 
         await sendEventTicketEmail({
-          to: user.email, name: user.name,
+          to: recipientEmail, name: recipientName,
           event: ev, packageName: pkg?.name || 'Standard',
           ticketCode, whatsappLink: ev?.whatsapp_link || null
         });
 
         await sendPaymentReceiptEmail({
-          to: user.email, name: user.name,
+          to: recipientEmail, name: recipientName,
           amount: payment.amount, reference,
           description: `Event registration: ${ev?.title}`
         });

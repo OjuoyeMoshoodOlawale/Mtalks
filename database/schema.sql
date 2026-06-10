@@ -157,7 +157,9 @@ CREATE TABLE event_registrations (
 
 CREATE TABLE payments (
   id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
-  user_id     INT UNSIGNED  NOT NULL,
+  user_id     INT UNSIGNED  NULL,     -- NULL for guest checkouts
+  guest_name  VARCHAR(100)  NULL,
+  guest_email VARCHAR(150)  NULL,
   type        ENUM('course','event') NOT NULL,
   item_id     INT UNSIGNED  NOT NULL,
   amount      DECIMAL(10,2) NOT NULL,

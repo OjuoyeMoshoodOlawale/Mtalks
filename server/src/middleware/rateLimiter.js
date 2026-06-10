@@ -1,49 +1,44 @@
 const rateLimit = require('express-rate-limit');
 
-/**
- * Skip rate limiting for authenticated requests (Bearer token present).
- * Admin users doing bulk uploads / frequent operations should never be blocked.
- * The rate limits mainly protect against unauthenticated bots and scrapers.
- */
 const skipAuthenticated = (req) => {
   const auth = req.headers.authorization;
   return !!(auth && auth.startsWith('Bearer ') && auth.length > 20);
 };
 
-/* Strict: login/register/password endpoints — 5 per minute, unauthenticated only */
+/* Login / register / password — 20 per 5 minutes (was 5/min — far too strict) */
 const authLimiter = rateLimit({
-  windowMs:               60 * 1000,
-  max:                    5,
+  windowMs:               5 * 60 * 1000,   // 5-minute window
+  max:                    20,               // 20 attempts per 5 minutes
   standardHeaders:        true,
   legacyHeaders:          false,
-  skipSuccessfulRequests: true,
-  message: { success: false, message: 'Too many attempts. Please wait 30 seconds and try again.' }
+  skipSuccessfulRequests: true,             // successful logins don't count
+  message: { success: false, message: 'Too many attempts. Please wait a few minutes.' }
 });
 
-/* Session: refresh / me / logout — 60/min but never blocks authenticated admins */
+/* Session calls (me / refresh / logout) — generous, skip if authenticated */
 const sessionLimiter = rateLimit({
   windowMs:        60 * 1000,
-  max:             60,
+  max:             120,
   standardHeaders: true,
   legacyHeaders:   false,
   skip:            skipAuthenticated,
   message: { success: false, message: 'Too many requests. Please slow down.' }
 });
 
-/* General: all other API routes — 200/min, authenticated users are never throttled */
+/* General API — 500/min, authenticated users always skip */
 const generalLimiter = rateLimit({
   windowMs:        60 * 1000,
-  max:             200,
+  max:             500,
   standardHeaders: true,
   legacyHeaders:   false,
-  skip:            skipAuthenticated,   // ← admins bulk-uploading images never hit this
+  skip:            skipAuthenticated,
   message: { success: false, message: 'Rate limit exceeded. Please slow down.' }
 });
 
-/* Webhook: Paystack callbacks */
+/* Webhook only */
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max:      50,
+  max:      100,
   message:  { success: false, message: 'Webhook rate limit exceeded.' }
 });
 
