@@ -143,7 +143,9 @@ CREATE TABLE event_packages (
 
 CREATE TABLE event_registrations (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id        INT UNSIGNED NOT NULL,
+  user_id        INT UNSIGNED NULL,
+  guest_name     VARCHAR(100) NULL,
+  guest_email    VARCHAR(150) NULL,
   event_id       INT UNSIGNED NOT NULL,
   package_id     INT UNSIGNED NOT NULL,
   payment_id     INT UNSIGNED,
