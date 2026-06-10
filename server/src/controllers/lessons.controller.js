@@ -62,14 +62,14 @@ exports.getOne = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-  const { module_id, title, drive_file_id, video_type, content, duration_min } = req.body;
+  const { module_id, title, drive_file_id, video_type, content, transcript, supplementary_url, supplementary_label, duration_min } = req.body;
   if (!module_id || !title) return badReq(res, 'module_id and title required');
   try {
     const [[{ maxOrder }]] = await db.query(
       'SELECT COALESCE(MAX(sort_order), -1) AS maxOrder FROM lessons WHERE module_id = ?', [module_id]);
     const [result] = await db.query(
-      'INSERT INTO lessons (module_id, title, drive_file_id, video_type, content, duration_min, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [module_id, title.trim(), drive_file_id || null, video_type === 'youtube' ? 'youtube' : 'drive', content || null, duration_min || 0, maxOrder + 1]);
+      'INSERT INTO lessons (module_id, title, drive_file_id, video_type, content, transcript, supplementary_url, supplementary_label, duration_min, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [module_id, title.trim(), drive_file_id || null, video_type === 'youtube' ? 'youtube' : 'drive', content || null, transcript || null, supplementary_url || null, supplementary_label || null, duration_min || 0, maxOrder + 1]);
     return created(res, { id: result.insertId });
   } catch (err) {
     logger.error('lessons.create', { error: err.message });
@@ -78,7 +78,7 @@ exports.create = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-  const allowed = ['title','drive_file_id','video_type','content','duration_min'];
+  const allowed = ['title','drive_file_id','video_type','content','transcript','supplementary_url','supplementary_label','duration_min'];
   const updates = []; const vals = [];
   for (const k of allowed) {
     if (k in req.body) { updates.push(`${k} = ?`); vals.push(req.body[k]); }

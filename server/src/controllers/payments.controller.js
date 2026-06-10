@@ -72,7 +72,7 @@ exports.initialize = async (req, res) => {
     return created(res, { authorization_url: txn.authorization_url, reference, amount });
   } catch (err) {
     logger.error('payments.initialize', { error: err.message, route: req.originalUrl, userId });
-    return serverErr(res);
+    return serverErr(res, err, 'Payment initialization failed');
   }
 };
 
@@ -116,7 +116,7 @@ exports.initializeGuestEvent = async (req, res) => {
     return created(res, { authorization_url: txn.authorization_url, reference, amount });
   } catch (err) {
     logger.error('payments.initializeGuestEvent', { error: err.message });
-    return serverErr(res, err, 'Guest payment initialization failed');
+    return serverErr(res, err, `Guest event payment failed: ${err.message}`);
   }
 };
 
@@ -213,6 +213,8 @@ exports.webhook = async (req, res) => {
     }
   } catch (err) {
     logger.error('webhook processing failed', { error: err.message, reference });
+    // Persist to error_logs
+    try { await db.query('INSERT INTO error_logs (route, message, stack) VALUES (?,?,?)', ['/api/payments/webhook', `Webhook failed [${reference}]: ${err.message}`, err.stack || '']); } catch(_){}
   }
 };
 

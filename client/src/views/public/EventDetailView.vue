@@ -63,8 +63,8 @@ const pay = async () => {
   if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
   const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
-  if (!paystackKey) {
-    ui.toastError('Payment is not configured yet. Please contact the administrator.')
+  if (!paystackKey || !paystackKey.trim() || paystackKey.startsWith('pk_test_xxx') || paystackKey.startsWith('pk_live_xxx')) {
+    ui.toastError('Payment key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in client/.env.local')
     return
   }
   if (!window.PaystackPop) {

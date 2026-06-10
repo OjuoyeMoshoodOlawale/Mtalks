@@ -5,41 +5,30 @@ const skipAuthenticated = (req) => {
   return !!(auth && auth.startsWith('Bearer ') && auth.length > 20);
 };
 
-/* Login / register / password — 20 per 5 minutes (was 5/min — far too strict) */
 const authLimiter = rateLimit({
-  windowMs:               5 * 60 * 1000,   // 5-minute window
-  max:                    20,               // 20 attempts per 5 minutes
+  windowMs:               15 * 60 * 1000,   // 15-min window
+  max:                    2000,              // 2000 attempts per window
   standardHeaders:        true,
   legacyHeaders:          false,
-  skipSuccessfulRequests: true,             // successful logins don't count
-  message: { success: false, message: 'Too many attempts. Please wait a few minutes.' }
+  skipSuccessfulRequests: true,
+  message: { success: false, message: 'Too many attempts. Please try again shortly.' }
 });
 
-/* Session calls (me / refresh / logout) — generous, skip if authenticated */
 const sessionLimiter = rateLimit({
-  windowMs:        60 * 1000,
-  max:             120,
-  standardHeaders: true,
-  legacyHeaders:   false,
-  skip:            skipAuthenticated,
-  message: { success: false, message: 'Too many requests. Please slow down.' }
+  windowMs: 60 * 1000, max: 2000, standardHeaders: true, legacyHeaders: false,
+  skip: skipAuthenticated,
+  message: { success: false, message: 'Too many requests.' }
 });
 
-/* General API — 500/min, authenticated users always skip */
 const generalLimiter = rateLimit({
-  windowMs:        60 * 1000,
-  max:             500,
-  standardHeaders: true,
-  legacyHeaders:   false,
-  skip:            skipAuthenticated,
-  message: { success: false, message: 'Rate limit exceeded. Please slow down.' }
+  windowMs: 60 * 1000, max: 2000, standardHeaders: true, legacyHeaders: false,
+  skip: skipAuthenticated,
+  message: { success: false, message: 'Rate limit exceeded.' }
 });
 
-/* Webhook only */
 const webhookLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max:      100,
-  message:  { success: false, message: 'Webhook rate limit exceeded.' }
+  windowMs: 60 * 1000, max: 500,
+  message: { success: false, message: 'Webhook rate limit exceeded.' }
 });
 
 module.exports = { authLimiter, sessionLimiter, generalLimiter, webhookLimiter };

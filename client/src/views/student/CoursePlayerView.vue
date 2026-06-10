@@ -30,22 +30,25 @@ const pct = computed(() => totalLessons.value > 0 ? Math.round((totalDone.value 
 
 
 onMounted(async () => {
-  const [c, p] = await Promise.all([
-    api.get(`/courses/${route.params.id}?by_id=1`).catch(() =>
-      api.get(`/courses?id=${route.params.id}`)),
-    api.get('/lessons/progress')
-  ])
-
-  const { data: cd } = await api.get(`/enrollments/my`)
-  const enrol = cd.data.find(e => e.course_id == route.params.id)
-  if (enrol) {
+  try {
+    const [enrollRes, progressRes] = await Promise.all([
+      api.get('/enrollments/my'),
+      api.get('/lessons/progress'),
+    ])
+    progress.value = progressRes.data.data || []
+    const enrol = enrollRes.data.data.find(e => String(e.course_id) === String(route.params.id))
+    if (!enrol) { loading.value = false; return }
     const { data } = await api.get(`/courses/${enrol.slug}`)
     course.value = data.data
+    /* Resume last active lesson: find first incomplete, else last completed */
+    const flat = flatLessons.value
+    const firstIncomplete = flat.find(l => !isDone(l.id))
+    const lastDone        = [...flat].reverse().find(l => isDone(l.id))
+    current.value = firstIncomplete || lastDone || flat[0] || null
+    if (current.value) loadVideo(current.value)
+  } finally {
+    loading.value = false
   }
-  progress.value = p.data.data || []
-  current.value = flatLessons.value[0] || null
-  if (current.value) loadVideo(current.value)
-  loading.value = false
 })
 
 const videoUrl   = ref(null)
@@ -122,6 +125,7 @@ const submitQuiz = async () => {
 }
 
 const retakeQuiz = () => { quizResult.value = null; answers.value = {} }
+const showTranscript = ref(false)
 
 const resultFor = (qId) => quizResult.value?.results?.find(r => r.question_id === qId)
 
@@ -172,7 +176,7 @@ const claimCertificate = async () => {
                 :color="isDone(l.id) ? 'var(--ma-green)' : 'rgba(255,255,255,.4)'" />
               <span>{{ l.title }}</span>
             </button>
-            <button class="quiz-btn" @click="openQuiz(mod)">
+            <button v-if="mod.evaluation" class="quiz-btn" @click="openQuiz(mod)">
               <HelpCircle :size="15" />
               <span>Module Quiz</span>
             </button>
@@ -216,6 +220,23 @@ const claimCertificate = async () => {
             <div>
               <p class="lesson-title">{{ current.title }}</p>
               <p v-if="current.content" class="lesson-notes">{{ current.content }}</p>
+              <!-- Supplementary article link -->
+              <a v-if="current.supplementary_url"
+                :href="current.supplementary_url"
+                target="_blank" rel="noopener noreferrer"
+                class="supp-link">
+                <ExternalLink :size="14" />
+                {{ current.supplementary_label || 'Read supplementary article' }}
+              </a>
+              <!-- Transcript / notes -->
+              <div v-if="current.transcript" class="lesson-transcript">
+                <button class="transcript-toggle" @click="showTranscript = !showTranscript">
+                  <FileText :size="15" />
+                  {{ showTranscript ? 'Hide' : 'Show' }} Lesson Notes
+                  <ChevronDown :size="14" :style="{ transform: showTranscript ? 'rotate(180deg)' : '', transition: 'transform .2s' }" />
+                </button>
+                <div v-if="showTranscript" class="transcript-body" v-html="current.transcript" />
+              </div>
             </div>
             <div class="ctrl-btns">
               <BaseButton variant="outline" @click="prev" :disabled="currentIdx===0" size="sm">
@@ -366,6 +387,15 @@ const claimCertificate = async () => {
 .completion-card h3{font-family:var(--font-heading);color:var(--ma-gold);margin:16px 0 8px}
 .completion-card p{color:rgba(255,255,255,.7)}
 /* Quiz button in sidebar */
+.supp-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 14px;border-radius:8px;border:1px solid var(--ma-green);color:var(--ma-green-deep);font-size:.83rem;font-weight:600;text-decoration:none;background:var(--ma-green-tint);transition:background .15s}
+.supp-link:hover{background:var(--ma-green);color:var(--ma-white)}
+.lesson-transcript{margin-top:14px}
+.transcript-toggle{display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:var(--ma-text-muted);background:none;border:none;cursor:pointer;padding:6px 0}
+.transcript-toggle:hover{color:var(--ma-green-deep)}
+.transcript-body{margin-top:10px;padding:16px;background:var(--ma-white);border-radius:var(--radius-md);border:1px solid var(--ma-border);font-size:.88rem;line-height:1.8;color:var(--ma-text)}
+.transcript-body :deep(h2),.transcript-body :deep(h3){font-family:var(--font-heading);color:var(--ma-green-dark);margin:12px 0 6px}
+.transcript-body :deep(ul),.transcript-body :deep(ol){padding-left:20px;margin:8px 0}
+.transcript-body :deep(blockquote){border-left:3px solid var(--ma-green);padding-left:12px;color:var(--ma-text-muted);margin:8px 0}
 .quiz-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px;margin-top:2px;border-radius:6px;background:rgba(240,193,48,.1);color:var(--ma-gold);font-size:.8rem;font-weight:600;cursor:pointer;border:1px dashed rgba(240,193,48,.35);transition:background var(--trans-fast)}
 .quiz-btn:hover{background:rgba(240,193,48,.2)}
 /* Quiz overlay */

@@ -21,7 +21,7 @@ const saving = ref(false)
 
 /* Modal state */
 const modModal = ref(false); const modForm = ref({ title:'', description:'' }); const modEdit = ref(null)
-const lesModal = ref(false); const lesForm = ref({ title:'', drive_file_id:'', video_type:'drive', content:'', duration_min:0 }); const lesEdit = ref(null); const lesModId = ref(null)
+const lesModal = ref(false); const lesForm = ref({ title:'', drive_file_id:'', video_type:'drive', content:'', transcript:'', supplementary_url:'', supplementary_label:'', duration_min:0 }); const lesEdit = ref(null); const lesModId = ref(null)
 const delTarget= ref(null); const delType = ref(null); const showDel = ref(false); const deleting = ref(false)
 const openMod  = ref(null)
 
@@ -52,8 +52,8 @@ const saveModule = async () => {
 }
 
 /* Lesson */
-const openLesCreate = (modId) => { lesModId.value=modId; lesEdit.value=null; lesForm.value={title:'',drive_file_id:'',video_type:'drive',content:'',duration_min:0}; lesModal.value=true }
-const openLesEdit   = (l, modId) => { lesModId.value=modId; lesEdit.value=l; lesForm.value={title:l.title,drive_file_id:l.drive_file_id||'',video_type:l.video_type||'drive',content:l.content||'',duration_min:l.duration_min||0}; lesModal.value=true }
+const openLesCreate = (modId) => { lesModId.value=modId; lesEdit.value=null; lesForm.value={title:'',drive_file_id:'',video_type:'drive',content:'',transcript:'',supplementary_url:'',supplementary_label:'',duration_min:0}; lesModal.value=true }
+const openLesEdit   = (l, modId) => { lesModId.value=modId; lesEdit.value=l; lesForm.value={title:l.title,drive_file_id:l.drive_file_id||'',video_type:l.video_type||'drive',content:l.content||'',transcript:l.transcript||'',supplementary_url:l.supplementary_url||'',supplementary_label:l.supplementary_label||'Read More',duration_min:l.duration_min||0}; lesModal.value=true }
 const saveLesson = async () => {
   if (!lesForm.value.title) { ui.toastError('Title required'); return }
   saving.value=true
