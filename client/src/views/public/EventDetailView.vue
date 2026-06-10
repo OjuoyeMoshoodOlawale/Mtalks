@@ -64,14 +64,18 @@ const guestEmail = ref('')
 const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUrl, onSuccess, onCancel }) => {
   const amountKobo = Math.round(Number(amountNaira) * 100)
 
+  console.log('[PAY] openPaystackPopup called', { key: key?.slice(0,12)+'...', email, amountKobo, reference, hasAuthUrl: !!authorizationUrl })
+  console.log('[PAY] window.PaystackPop:', typeof window.PaystackPop)
+
   if (!window.PaystackPop || typeof window.PaystackPop.setup !== 'function') {
-    // Inline script not available — use redirect fallback
+    console.warn('[PAY] PaystackPop not available — using redirect fallback')
     if (authorizationUrl) { window.open(authorizationUrl, '_blank'); return }
     ui.toastError('Payment widget unavailable. Please refresh the page and try again.')
     return
   }
 
   try {
+    console.log('[PAY] Calling PaystackPop.setup()...')
     const handler = window.PaystackPop.setup({
       key,
       email,
@@ -81,12 +85,14 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
       callback: onSuccess,
       onClose:  onCancel
     })
+    console.log('[PAY] handler created:', handler)
+    console.log('[PAY] Calling handler.openIframe()...')
     handler.openIframe()
+    console.log('[PAY] openIframe() called — popup should be visible now')
   } catch (err) {
-    console.error('[Paystack] openIframe error:', err)
-    // Fallback to hosted redirect
+    console.error('[PAY] openIframe threw an error:', err)
     if (authorizationUrl) {
-      ui.toast('Opening payment page...')
+      ui.toast('Opening payment page in new tab...')
       window.open(authorizationUrl, '_blank')
     } else {
       ui.toastError('Could not open payment popup. Please refresh and try again.')
@@ -95,9 +101,13 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
 }
 
 const pay = async () => {
+  console.log('[PAY] pay() clicked', { selPkg: selPkg.value?.name, isLoggedIn: auth.isLoggedIn })
+
   if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
   const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
+  console.log('[PAY] paystackKey:', paystackKey ? paystackKey.slice(0,15)+'...' : 'MISSING')
+
   if (!paystackKey || !paystackKey.trim() || paystackKey.startsWith('pk_test_xxx') || paystackKey.startsWith('pk_live_xxx')) {
     ui.toastError('Payment key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in client/.env.local')
     return
@@ -120,9 +130,11 @@ const pay = async () => {
 
   paying.value = true
   try {
+    console.log('[PAY] Calling /payments/initialize...', { event_id: event.value?.id, package_id: selPkg.value?.id })
     const { data } = await api.post('/payments/initialize', {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
+    console.log('[PAY] Server response:', data.data)
     const { reference, amount, authorization_url } = data.data
     openPaystackPopup({
       key:              paystackKey,
