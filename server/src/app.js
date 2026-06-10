@@ -104,8 +104,8 @@ app.get('/api/health', (req, res) => {
     env:      process.env.NODE_ENV,
     services: {
       database: 'connected',
-      paystack: sk && !sk.includes('xxxx') ? 'configured ✓' : '⚠️  PAYSTACK_SECRET_KEY not set',
-      email:    process.env.GMAIL_USER ? 'configured ✓' : '⚠️  GMAIL_USER not set',
+      paystack: sk && !sk.includes('xxxx') ? 'configured' : 'NOT SET — add PAYSTACK_SECRET_KEY to server/.env',
+      email:    process.env.GMAIL_USER ? 'configured' : 'NOT SET — add GMAIL_USER to server/.env',
     }
   });
 });
