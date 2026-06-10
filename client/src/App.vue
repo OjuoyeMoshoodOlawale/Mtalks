@@ -20,14 +20,6 @@ const crispActive = ref(false)
 const showBot = computed(() =>
   !crispActive.value && !route.path.startsWith('/admin') && !route.path.includes('/learn'))
 
-// Show toast for unhandled API errors anywhere in the app
-api.interceptors.response.use(undefined, (err) => {
-  if (err.isNetworkError) {
-    ui.toastError('Server unreachable — check that the API is running.')
-  }
-  return Promise.reject(err)
-})
-
 onMounted(async () => {
   if (auth.accessToken) await auth.fetchMe()
 

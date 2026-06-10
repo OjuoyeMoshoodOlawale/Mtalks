@@ -30,12 +30,24 @@ export const useAuthStore = defineStore('auth', () => {
     return data.data
   }
 
-  const logout = () => {
+  /* clearSession — local only, never calls the API (avoids refresh loop) */
+  const clearSession = () => {
     accessToken.value = ''
-    user.value = null
+    user.value        = null
     localStorage.removeItem('ma_token')
-    api.post('/auth/logout').catch(() => {})
   }
 
-  return { user, accessToken, isLoggedIn, isAdmin, setToken, setUser, fetchMe, login, logout }
+  /* logout — clears session then tells server (fire-and-forget, non-critical) */
+  const logout = () => {
+    clearSession()
+    // Tell server to invalidate the httpOnly refresh cookie.
+    // We use plain fetch so it bypasses the Axios interceptor entirely.
+    fetch('/api/auth/logout', {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' }
+    }).catch(() => {})   // ignore errors — local session is already cleared
+  }
+
+  return { user, accessToken, isLoggedIn, isAdmin, setToken, setUser, fetchMe, login, logout, clearSession }
 })
