@@ -17,7 +17,7 @@ exports.getAll = async (req, res) => {
     query += ' ORDER BY er.registered_at DESC';
     const [rows] = await db.query(query, params);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.checkIn = async (req, res) => {
@@ -27,7 +27,7 @@ exports.checkIn = async (req, res) => {
     if (reg.attended_at) return ok(res, { message: 'Already checked in' });
     await db.query('UPDATE event_registrations SET attended_at = NOW() WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Checked in successfully' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.getMine = async (req, res) => {
@@ -50,7 +50,7 @@ exports.getMine = async (req, res) => {
     }
 
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create  = async (req, res) => ok(res, { message: 'Use payments/initialize for paid events' });

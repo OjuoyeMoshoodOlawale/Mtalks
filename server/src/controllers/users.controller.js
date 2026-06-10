@@ -15,7 +15,7 @@ exports.getAll = async (req, res) => {
       [...vals, limit, offset]);
     const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM users ${where}`, vals);
     return ok(res, rows, { pagination: { page, perPage, total } });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.getOne = async (req, res) => {
@@ -28,7 +28,7 @@ exports.getOne = async (req, res) => {
     const [payments] = await db.query(
       'SELECT * FROM payments WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [user.id]);
     return ok(res, { ...user, enrollments, payments });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.updateRole = async (req, res) => {
@@ -37,14 +37,14 @@ exports.updateRole = async (req, res) => {
   try {
     await db.query('UPDATE users SET role = ? WHERE id = ?', [role, req.params.id]);
     return ok(res, { message: `User role set to ${role}` });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.toggleActive = async (req, res) => {
   try {
     await db.query('UPDATE users SET is_active = NOT is_active WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Status toggled' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => ok(res, {});

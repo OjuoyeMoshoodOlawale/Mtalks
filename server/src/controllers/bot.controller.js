@@ -73,7 +73,7 @@ exports.getAll = async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM bot_knowledge ORDER BY topic');
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* POST /api/bot/knowledge */
@@ -86,7 +86,7 @@ exports.create = async (req, res) => {
       'INSERT INTO bot_knowledge (topic, keywords, answer) VALUES (?, ?, ?)',
       [topic.trim(), keywords.trim(), answer.trim()]);
     return ok(res, { id: r.insertId, message: 'Knowledge added' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* PUT /api/bot/knowledge/:id */
@@ -97,7 +97,7 @@ exports.update = async (req, res) => {
       'UPDATE bot_knowledge SET topic = ?, keywords = ?, answer = ?, is_active = ? WHERE id = ?',
       [topic, keywords, answer, is_active ? 1 : 0, req.params.id]);
     return ok(res, { message: 'Knowledge updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* DELETE /api/bot/knowledge/:id */
@@ -105,5 +105,5 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM bot_knowledge WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Knowledge deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

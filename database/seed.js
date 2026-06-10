@@ -467,6 +467,16 @@ async function seed() {
   `);
   console.log('📊  Lesson progress seeded');
 
+
+  /* ── DEMO CONTACTS ──────────────────────────────────────────── */
+  await c.query(`
+    INSERT INTO contacts (name, email, subject, message, is_read, created_at) VALUES
+    ('Amina Yusuf',   'amina.yusuf@demo.com',  'Course enquiry',          'Assalamu alaikum. I would like to know if the Marriage Foundation Masterclass is suitable for someone who is newly married (6 months). JazakAllahu khayran.',  0, DATE_SUB(NOW(), INTERVAL 2  DAY)),
+    ('Ibrahim Bello', 'ibrahim.b@demo.com',    'Upcoming events in Kano', 'Salam. Are there any events planned for Kano or northern Nigeria? The summit in Abuja looks amazing but we are based in Kano.',                                0, DATE_SUB(NOW(), INTERVAL 5  DAY)),
+    ('Fatima Sule',   'fatima.sule@demo.com',  'Refund request',          'Good day. I paid for the Emotional Intelligence course but I made a mistake and paid twice. Please can you help me with a refund for the duplicate payment.', 1, DATE_SUB(NOW(), INTERVAL 10 DAY)),
+    ('Dr Rasheed',    'rasheed.md@demo.com',   'Partnership opportunity',  'Assalamu alaikum Coach Madinah. I am a family therapist based in Lagos and I would love to explore a possible collaboration on corporate marriage wellness programmes.', 1, DATE_SUB(NOW(), INTERVAL 15 DAY));
+  `);
+  console.log('📩  Demo contacts seeded (4)');
   /* ── 15. MUZZAMIL BOT KNOWLEDGE ───────────────────────────── */
   await c.query(`
     INSERT INTO bot_knowledge (topic, keywords, answer) VALUES

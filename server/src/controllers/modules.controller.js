@@ -45,14 +45,14 @@ exports.update = async (req, res) => {
     await db.query('UPDATE modules SET title = ?, description = ? WHERE id = ?',
       [title.trim(), description || null, req.params.id]);
     return ok(res, { message: 'Module updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM modules WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Module deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.reorder = async (req, res) => {
@@ -63,5 +63,5 @@ exports.reorder = async (req, res) => {
       await db.query('UPDATE modules SET sort_order = ? WHERE id = ?', [sort_order, id]);
     }
     return ok(res, { message: 'Order saved' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

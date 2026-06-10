@@ -6,7 +6,7 @@ exports.getAll = async (req, res) => {
   try {
     const [rows] = await db.query(`SELECT * FROM faqs ${where} ORDER BY sort_order ASC, id ASC`);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => {
@@ -17,7 +17,7 @@ exports.create = async (req, res) => {
       'INSERT INTO faqs (question, answer, category) VALUES (?, ?, ?)',
       [question.trim(), answer.trim(), category || 'General']);
     return created(res, { id: r.insertId });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.update = async (req, res) => {
@@ -29,7 +29,7 @@ exports.update = async (req, res) => {
   try {
     await db.query(`UPDATE faqs SET ${updates.join(', ')} WHERE id = ?`, vals);
     return ok(res, { message: 'Updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.remove = async (req, res) => {

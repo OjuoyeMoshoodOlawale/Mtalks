@@ -17,7 +17,7 @@ exports.getAll = async (req, res) => {
       thumb: driveImg(r.drive_file_id, 480),
     }));
     return ok(res, data);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* POST /api/gallery — admin. Accepts single ID or comma/newline separated bulk paste */
@@ -43,7 +43,7 @@ exports.create = async (req, res) => {
         [ids.length === 1 ? (title || null) : (title || null), id, category || 'General']);
     }
     return ok(res, { message: `${ids.length} image${ids.length > 1 ? 's' : ''} added` });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* PUT /api/gallery/:id — admin */
@@ -54,7 +54,7 @@ exports.update = async (req, res) => {
       'UPDATE gallery_images SET title = ?, category = ?, sort_order = ?, is_published = ? WHERE id = ?',
       [title || null, category || 'General', sort_order || 0, is_published ? 1 : 0, req.params.id]);
     return ok(res, { message: 'Image updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* DELETE /api/gallery/:id — admin */
@@ -62,5 +62,5 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM gallery_images WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Image removed' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

@@ -6,7 +6,7 @@ exports.getAll = async (req, res) => {
   try {
     const [rows] = await db.query(`SELECT * FROM team_members ${where} ORDER BY sort_order ASC`);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => {
@@ -17,7 +17,7 @@ exports.create = async (req, res) => {
       'INSERT INTO team_members (name, role, bio, photo, social_links) VALUES (?, ?, ?, ?, ?)',
       [name.trim(), role || null, bio || null, photo || null, JSON.stringify(social_links || {})]);
     return created(res, { id: result.insertId });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.update = async (req, res) => {
@@ -32,12 +32,12 @@ exports.update = async (req, res) => {
   try {
     await db.query(`UPDATE team_members SET ${updates.join(', ')} WHERE id = ?`, vals);
     return ok(res, { message: 'Team member updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM team_members WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

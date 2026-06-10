@@ -74,7 +74,7 @@ exports.getMine = async (req, res) => {
        WHERE c.user_id = ? ORDER BY c.issued_at DESC`,
       [req.user.id]);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* GET /api/certificates/verify/:code — PUBLIC verification */
@@ -89,5 +89,5 @@ exports.verify = async (req, res) => {
       [req.params.code.toUpperCase()]);
     if (!cert) return notFound(res, 'Certificate not found — this code is not valid');
     return ok(res, cert);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

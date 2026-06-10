@@ -206,8 +206,7 @@ exports.getMe = async (req, res) => {
     );
     if (!users.length) return unauth(res, 'Account not found');
     return ok(res, users[0]);
-  } catch (err) {
-    return serverErr(res);
+  } catch (err) { return serverErr(res, err, 'Server error');
   }
 };
 

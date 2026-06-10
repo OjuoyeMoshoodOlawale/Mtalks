@@ -9,7 +9,7 @@ exports.getAll = async (req, res) => {
       `SELECT * FROM testimonials ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [limit, offset]);
     const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM testimonials ${where}`);
     return ok(res, rows, { pagination: { page, perPage, total } });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => {
@@ -20,7 +20,7 @@ exports.create = async (req, res) => {
       'INSERT INTO testimonials (client_name, content, rating, client_photo, source) VALUES (?, ?, ?, ?, ?)',
       [client_name.trim(), content.trim(), rating || 5, client_photo || null, source || 'manual']);
     return created(res, { id: result.insertId });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.update = async (req, res) => {
@@ -32,12 +32,12 @@ exports.update = async (req, res) => {
   try {
     await db.query(`UPDATE testimonials SET ${updates.join(', ')} WHERE id = ?`, vals);
     return ok(res, { message: 'Updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM testimonials WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

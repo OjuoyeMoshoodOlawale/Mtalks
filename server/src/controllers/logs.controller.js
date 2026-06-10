@@ -11,14 +11,14 @@ exports.getAll = async (req, res) => {
       `SELECT id, route, message, user_id, created_at FROM error_logs ${cond} ORDER BY created_at DESC LIMIT ? OFFSET ?`, vals);
     const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM error_logs ${cond}`, route ? [`%${route}%`] : []);
     return ok(res, rows, { pagination: { page, perPage, total } });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.getOne = async (req, res) => {
   try {
     const [[log]] = await db.query('SELECT * FROM error_logs WHERE id = ?', [req.params.id]);
     return ok(res, log || null);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => ok(res, {});
@@ -27,5 +27,5 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM error_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)');
     return ok(res, { message: 'Old logs purged' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

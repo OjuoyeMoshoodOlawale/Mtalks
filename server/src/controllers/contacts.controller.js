@@ -32,7 +32,7 @@ exports.getAll = async (req, res) => {
       'SELECT * FROM contacts ORDER BY created_at DESC'
     );
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* PATCH /api/contacts/:id/read — admin only */
@@ -40,7 +40,7 @@ exports.markRead = async (req, res) => {
   try {
     await db.query('UPDATE contacts SET is_read = 1 WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Marked as read' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* DELETE /api/contacts/:id — admin only */
@@ -48,7 +48,7 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM contacts WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* GET /api/contacts/unread-count — admin only */
@@ -56,5 +56,5 @@ exports.unreadCount = async (req, res) => {
   try {
     const [[row]] = await db.query('SELECT COUNT(*) AS count FROM contacts WHERE is_read = 0');
     return ok(res, { count: row.count });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

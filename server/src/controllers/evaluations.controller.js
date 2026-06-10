@@ -72,7 +72,7 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM evaluations WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Quiz deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* ═══════════════ STUDENT ═══════════════ */
@@ -177,5 +177,5 @@ exports.myAttempts = async (req, res) => {
        ORDER BY attempted_at DESC LIMIT 10`,
       [req.user.id, req.params.id]);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

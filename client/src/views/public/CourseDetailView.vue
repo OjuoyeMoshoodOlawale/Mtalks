@@ -50,9 +50,14 @@ const enrol = async () => {
     enrolling.value = true
     try {
       const { data } = await api.post('/payments/initialize', { type: 'course', item_id: course.value.id })
+      const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
+      if (!paystackKey) {
+        ui.toastError('Payment is not configured yet. Please contact the administrator.')
+        enrolling.value = false; return
+      }
       if (window.PaystackPop) {
         window.PaystackPop.setup({
-          key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+          key: paystackKey,
           email: auth.user.email,
           amount: Math.round(course.value.price * 100),
           ref: data.data.reference,

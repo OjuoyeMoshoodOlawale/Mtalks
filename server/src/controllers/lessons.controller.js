@@ -9,7 +9,7 @@ exports.getAll = async (req, res) => {
     const [rows] = await db.query(
       'SELECT * FROM lessons WHERE module_id = ? ORDER BY sort_order ASC', [module_id]);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 /* ── PROTECTED VIDEO ──
@@ -58,7 +58,7 @@ exports.getOne = async (req, res) => {
       delete lesson.drive_file_id;
     }
     return ok(res, lesson);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => {
@@ -88,14 +88,14 @@ exports.update = async (req, res) => {
   try {
     await db.query(`UPDATE lessons SET ${updates.join(', ')} WHERE id = ?`, vals);
     return ok(res, { message: 'Lesson updated' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM lessons WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Lesson deleted' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.reorder = async (req, res) => {
@@ -106,7 +106,7 @@ exports.reorder = async (req, res) => {
       await db.query('UPDATE lessons SET sort_order = ? WHERE id = ?', [sort_order, id]);
     }
     return ok(res, { message: 'Reordered' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.complete = async (req, res) => {
@@ -115,7 +115,7 @@ exports.complete = async (req, res) => {
       'INSERT IGNORE INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)',
       [req.user.id, req.params.id]);
     return ok(res, { message: 'Progress saved' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.getProgress = async (req, res) => {
@@ -123,5 +123,5 @@ exports.getProgress = async (req, res) => {
     const [rows] = await db.query(
       'SELECT lesson_id FROM lesson_progress WHERE user_id = ?', [req.user.id]);
     return ok(res, rows.map(r => r.lesson_id));
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

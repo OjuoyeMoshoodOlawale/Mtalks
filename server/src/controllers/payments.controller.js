@@ -178,7 +178,6 @@ exports.getMine = async (req, res) => {
       [req.user.id]
     );
     return ok(res, rows);
-  } catch (err) {
-    return serverErr(res);
+  } catch (err) { return serverErr(res, err, 'Server error');
   }
 };

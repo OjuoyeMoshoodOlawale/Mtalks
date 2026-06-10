@@ -45,25 +45,38 @@ const pkgPrice    = (pkg) => isEarlyBird(pkg) ? pkg.early_bird_price : pkg.price
 const pay = async () => {
   if (!auth.isLoggedIn) { router.push({ name: 'Login', query: { redirect: route.fullPath } }); return }
   if (!selPkg.value) { ui.toastError('Please select a package first'); return }
+
+  const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
+  if (!paystackKey) {
+    ui.toastError('Payment is not configured yet. Please contact the administrator.')
+    return
+  }
+  if (!window.PaystackPop) {
+    ui.toastError('Payment script is loading. Please wait a moment and try again.')
+    return
+  }
+
   paying.value = true
   try {
     const { data } = await api.post('/payments/initialize', {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
     window.PaystackPop.setup({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+      key: paystackKey,
       email: auth.user.email,
       amount: Math.round(pkgPrice(selPkg.value) * 100),
       ref: data.data.reference,
       callback: async () => {
-        ui.toast('Payment confirmed! Your ticket has been sent to your email. 🎉')
+        ui.toast('Payment confirmed! 🎉 Your ticket has been sent to your email.')
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
       },
-      onClose: () => {}
+      onClose: () => { ui.toastError('Payment was cancelled.') }
     }).openIframe()
-  } catch (e) { ui.toastError(e.response?.data?.message || 'Payment failed. Please try again.') }
-  finally { paying.value = false }
+  } catch (e) {
+    const msg = e.response?.data?.message || e.message || 'Payment failed. Please try again.'
+    ui.toastError(msg)
+  } finally { paying.value = false }
 }
 </script>
 
@@ -94,21 +107,6 @@ const pay = async () => {
           <h2 style="margin-bottom:16px">About This Event</h2>
           <p style="white-space:pre-line;line-height:1.8;color:var(--ma-text-muted)">{{ event.description }}</p>
 
-          <h3 style="margin:36px 0 16px">Packages</h3>
-          <div class="packages-grid">
-            <div v-for="pkg in event.packages" :key="pkg.id"
-              :class="['pkg-card', {selected: selPkg?.id===pkg.id}]"
-              @click="selPkg=pkg">
-              <div class="pkg-name">{{ pkg.name }}</div>
-              <div v-if="isEarlyBird(pkg)" class="early-bird-badge">Early Bird</div>
-              <div class="pkg-price">₦{{ Number(pkgPrice(pkg)).toLocaleString() }}</div>
-              <div v-if="isEarlyBird(pkg)" class="pkg-original">₦{{ Number(pkg.price).toLocaleString() }}</div>
-              <p v-if="pkg.description" class="pkg-desc">{{ pkg.description }}</p>
-              <div v-if="isEarlyBird(pkg)" class="pkg-deadline">
-                <Timer :size="13" /> Ends {{ new Date(pkg.early_bird_deadline).toLocaleDateString() }}
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Registration card -->

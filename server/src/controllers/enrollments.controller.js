@@ -12,7 +12,7 @@ exports.getAll = async (req, res) => {
        JOIN courses c ON c.id = e.course_id
        ORDER BY e.enrolled_at DESC`);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.getMine = async (req, res) => {
@@ -29,7 +29,7 @@ exports.getMine = async (req, res) => {
        WHERE e.user_id = ? ORDER BY e.enrolled_at DESC`,
       [req.user.id]);
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = async (req, res) => {
@@ -59,5 +59,5 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM enrollments WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Enrollment removed' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };

@@ -16,7 +16,7 @@ exports.getPublic = async (req, res) => {
       PUBLIC_KEYS
     );
     return ok(res, rows);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.getAll = async (req, res) => {
@@ -25,7 +25,7 @@ exports.getAll = async (req, res) => {
     const obj = {};
     rows.forEach(r => { obj[r.key] = r.value; });
     return ok(res, obj);
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.update = async (req, res) => {
@@ -38,7 +38,7 @@ exports.update = async (req, res) => {
         [key, value, value]);
     }
     return ok(res, { message: 'Settings saved' });
-  } catch (err) { return serverErr(res); }
+  } catch (err) { return serverErr(res, err, 'Server error'); }
 };
 
 exports.create = exports.update;

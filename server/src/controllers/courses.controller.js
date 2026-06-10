@@ -99,7 +99,6 @@ exports.remove = async (req, res) => {
   try {
     await db.query('DELETE FROM courses WHERE id = ?', [req.params.id]);
     return ok(res, { message: 'Course deleted' });
-  } catch (err) {
-    return serverErr(res);
+  } catch (err) { return serverErr(res, err, 'Server error');
   }
 };

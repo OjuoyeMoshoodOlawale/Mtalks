@@ -17,7 +17,29 @@ const unauth   = (res, msg = 'Unauthorized')    => respond(res, 401, false, msg)
 const forbidden= (res, msg = 'Forbidden')       => respond(res, 403, false, msg);
 const notFound = (res, msg = 'Not found')       => respond(res, 404, false, msg);
 const conflict = (res, msg)           => respond(res, 409, false, msg);
-const serverErr= (res, msg = 'Server error')    => respond(res, 500, false, msg);
+
+/**
+ * serverErr — respond 500 AND automatically persist to error_logs
+ * so admins can see production errors at Admin → Error Logs.
+ * Accepts an optional Error object for the full stack trace.
+ */
+const serverErr = (res, msgOrErr = 'Server error', extraMsg) => {
+  const isErr = msgOrErr instanceof Error;
+  const msg   = isErr ? (extraMsg || 'Server error') : (msgOrErr || 'Server error');
+  const stack = isErr ? msgOrErr.stack : (new Error(msg).stack || '');
+
+  try {
+    const db     = require('../config/db');
+    const route  = res.req?.originalUrl || 'unknown';
+    const userId = res.req?.user?.id    || null;
+    db.query(
+      'INSERT INTO error_logs (route, message, stack, user_id) VALUES (?, ?, ?, ?)',
+      [route, msg, stack.slice(0, 4000), userId]
+    ).catch(() => {});
+  } catch (_) { /* never let logging break the response */ }
+
+  return respond(res, 500, false, msg);
+};
 
 /** Generate a unique ticket code */
 const genTicketCode = () => uuidv4().replace(/-/g, '').toUpperCase().slice(0, 16);
