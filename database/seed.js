@@ -125,76 +125,63 @@ async function seed() {
   /* ── 4. MODULES ───────────────────────────────────────────── */
   await c.query(`
     INSERT INTO modules (course_id, title, sort_order) VALUES
-    -- Course 1: Love Languages
-    (1, 'Introduction to Love Languages',          1),
-    (1, 'The 5 Love Languages Explained',          2),
-    (1, 'Applying Love Languages Daily',           3),
-    -- Course 2: Marriage Foundation
+    -- Course 1: Understanding Your Love Language (free)
+    (1, 'Foundations of Love in Islam',            1),
+    (1, 'What Your Spouse Truly Needs',            2),
+    -- Course 2: Marriage Foundation Masterclass (paid)
     (2, 'Before You Say I Do',                     1),
-    (2, 'Building Emotional Connection',           2),
-    (2, 'Conflict Resolution Strategies',          3),
-    (2, 'Financial Partnership in Marriage',       4),
-    (2, 'Faith and Purpose in Your Union',         5),
-    -- Course 3: Emotional Intelligence
-    (3, 'What is Emotional Intelligence?',         1),
-    (3, 'Self-Awareness and Self-Regulation',      2),
-    (3, 'Empathy in Relationships',                3),
-    (3, 'Practical EQ Exercises for Couples',      4),
-    -- Course 4: Healing After Heartbreak
-    (4, 'Understanding Grief and Loss',            1),
-    (4, 'Rebuilding Your Confidence',              2),
-    -- Course 5: Communication
-    (5, 'Communication Styles and Patterns',       1),
-    (5, 'Active Listening Techniques',             2),
-    (5, 'Navigating Difficult Conversations',      3),
-    (5, 'Building a Communication Culture',        4);
+    (2, 'Building Your Marriage on Solid Ground',  2),
+    (2, 'Marriage in a Changing World',            3),
+    -- Course 3: Emotional Intelligence for Couples (paid)
+    (3, 'Inner Peace and Self-Regulation',         1),
+    (3, 'Guarding and Growing Your Heart',         2),
+    -- Course 4: Healing After Heartbreak (free)
+    (4, 'Understanding the Broken Heart',          1),
+    (4, 'The Journey Back to Wholeness',           2),
+    -- Course 5: Communication in Marriage (paid)
+    (5, 'What Marriage Should Feel Like',          1),
+    (5, 'Resolving Conflict the Right Way',        2);
   `);
-  console.log('📦  Modules seeded (18)');
+  console.log('📦  Modules seeded (11)');
 
   /* ── 5. LESSONS ───────────────────────────────────────────── */
-  // Replace DRIVE_ID_XXX with real Google Drive file IDs when videos are uploaded
+  // All real, public YouTube lectures (video_type = 'youtube')
   await c.query(`
-    INSERT INTO lessons (module_id, title, drive_file_id, duration_min, sort_order) VALUES
-    -- Module 1 (Love Language Intro)
-    (1,  'Welcome — What to Expect',                 'DRIVE_ID_001', 5,  1),
-    (1,  'Why Love Languages Change Everything',      'DRIVE_ID_002', 12, 2),
-    (1,  'Taking the Love Language Quiz',             'DRIVE_ID_003', 8,  3),
-    -- Module 2 (The 5 Languages)
-    (2,  'Words of Affirmation',                     'DRIVE_ID_004', 15, 1),
-    (2,  'Acts of Service',                          'DRIVE_ID_005', 14, 2),
-    (2,  'Receiving Gifts',                          'DRIVE_ID_006', 12, 3),
-    (2,  'Quality Time',                             'DRIVE_ID_007', 16, 4),
-    (2,  'Physical Touch',                           'DRIVE_ID_008', 13, 5),
-    -- Module 3 (Applying Daily)
-    (3,  'Speaking Your Partner''s Language',         'DRIVE_ID_009', 18, 1),
-    (3,  '30-Day Love Language Challenge',            'DRIVE_ID_010', 10, 2),
-    -- Module 4 (Before You Say I Do)
-    (4,  'Compatibility Assessment Deep-Dive',        'DRIVE_ID_011', 20, 1),
-    (4,  'Red Flags vs Growth Areas',                'DRIVE_ID_012', 22, 2),
-    (4,  'Setting Expectations Together',             'DRIVE_ID_013', 18, 3),
-    -- Module 5 (Emotional Connection)
-    (5,  'The Emotional Bank Account',               'DRIVE_ID_014', 19, 1),
-    (5,  'Vulnerability and Trust',                  'DRIVE_ID_015', 21, 2),
-    (5,  'Creating Rituals of Connection',            'DRIVE_ID_016', 17, 3),
-    -- Module 9 (What is EQ)
-    (9,  'Intro to Emotional Intelligence',          'DRIVE_ID_017', 15, 1),
-    (9,  'EQ vs IQ — What Actually Matters',         'DRIVE_ID_018', 14, 2),
-    -- Module 13 (Grief and Loss)
-    (13, 'Allowing Yourself to Grieve',              'DRIVE_ID_019', 16, 1),
-    (13, 'The Stages of Emotional Recovery',         'DRIVE_ID_020', 18, 2),
-    (13, 'Journaling Your Healing Journey',           'DRIVE_ID_021', 10, 3),
-    -- Module 14 (Rebuilding Confidence)
-    (14, 'Rediscovering Your Identity',              'DRIVE_ID_022', 20, 1),
-    (14, 'Forgiveness — Setting Yourself Free',       'DRIVE_ID_023', 22, 2),
-    (14, 'Ready to Love Again?',                     'DRIVE_ID_024', 15, 3),
-    -- Module 15 (Communication Styles)
-    (15, 'Your Communication Personality Type',      'DRIVE_ID_025', 18, 1),
-    (15, 'Passive vs Aggressive vs Assertive',        'DRIVE_ID_026', 20, 2),
-    -- Module 16 (Active Listening)
-    (16, 'The Art of Truly Listening',               'DRIVE_ID_027', 17, 1),
-    (16, 'Reflective Listening Exercises',            'DRIVE_ID_028', 15, 2);
+    INSERT INTO lessons (module_id, title, drive_file_id, video_type, duration_min, sort_order) VALUES
+    -- M1: Foundations of Love in Islam
+    (1,  'Love, Peace & Partnership — Mufti Menk',                       '6iTrnGhuhm4', 'youtube', 45, 1),
+    (1,  'This Is What Marriage Should Be — Nouman Ali Khan',            'XhZY7rzKWhM', 'youtube', 20, 2),
+    -- M2: What Your Spouse Truly Needs
+    (2,  '5 Things Your Wife Needs From You — Nouman Ali Khan',          'sdqZMxscyE8', 'youtube', 18, 1),
+    (2,  'The Most Important Thing Your Husband Needs — Nouman Ali Khan','bIeQBPh4NP0', 'youtube', 15, 2),
+    -- M3: Before You Say I Do
+    (3,  'Selecting a Good Spouse — Mufti Menk',                         '83mufaag6PU', 'youtube', 30, 1),
+    (3,  'What To Do Before Getting Married — Nouman Ali Khan',          'CMBloGa9WN8', 'youtube', 22, 2),
+    (3,  'Open the Doors to Marriage — Nouman Ali Khan',                 'FXP39jFRfGY', 'youtube', 28, 3),
+    -- M4: Building Your Marriage on Solid Ground
+    (4,  'Marriage & Relationships, Part 1 — Mufti Menk',                'JEi4FwFvFUg', 'youtube', 55, 1),
+    (4,  'Marriage & Relationships, Part 2 — Mufti Menk',                'q9D5kxnYuQo', 'youtube', 50, 2),
+    -- M5: Marriage in a Changing World
+    (5,  'Marriage in a Changing World — Mufti Menk',                    's920tt771bY', 'youtube', 40, 1),
+    -- M6: Inner Peace and Self-Regulation
+    (6,  'Attaining Inner Peace During Hardships — Yasmin Mogahed',      'lthemAddZeI', 'youtube', 48, 1),
+    (6,  'Don''t Feel Guilty — Yasmin Mogahed',                          'RNkRLiPV0Vg', 'youtube', 42, 2),
+    -- M7: Guarding and Growing Your Heart
+    (7,  'Nourishing & Protecting Your Heart — Yasmin Mogahed',          'P0s1PKcVbuo', 'youtube', 45, 1),
+    (7,  'Your Journey Towards Healing & Happiness — Yasmin Mogahed',    'fbe4JJkchac', 'youtube', 35, 2),
+    -- M8: Understanding the Broken Heart
+    (8,  'Healing a Broken Heart — Yasmin Mogahed',                      'CX27CMfw0cI', 'youtube', 40, 1),
+    (8,  'How Do You Deal With Heartbreak? — Yasmin Mogahed',            'Eo4M7DKCM10', 'youtube', 12, 2),
+    -- M9: The Journey Back to Wholeness
+    (9,  'How To Transform a Broken Heart — Yasmin Mogahed',             'fjx96n-PaAk', 'youtube', 50, 1),
+    (9,  'Healing a Broken Heart (Reflections) — Yasmin Mogahed',        'G_Y8kZa53WI', 'youtube', 25, 2),
+    -- M10: What Marriage Should Feel Like
+    (10, 'Challenging Your Spouse with Islam — Nouman Ali Khan',         'o2jojfX8AHI', 'youtube', 16, 1),
+    -- M11: Resolving Conflict the Right Way
+    (11, 'Issues in Marriage — Mufti Menk',                              'Lyk_ggupqfk', 'youtube', 35, 1),
+    (11, 'How To Save Your Marriage — Mufti Menk',                       'H3pEWpqUhFM', 'youtube', 30, 2);
   `);
-  console.log('🎬  Lessons seeded (28)');
+  console.log('🎬  Lessons seeded (21 — all real YouTube lectures)');
 
   /* ── 6. EVENTS ────────────────────────────────────────────── */
   await c.query(`
@@ -525,8 +512,8 @@ async function seed() {
   SEEDED DATA
   ───────────
   5  courses  (2 free, 3 paid)
-  18 modules
-  28 lessons  (replace DRIVE_ID_XXX with real IDs)
+  11 modules
+  21 lessons (real public YouTube lectures)
   2  events   (with 5 packages)
   3  team members
   8  testimonials

@@ -71,9 +71,8 @@ Mtalks/
 │       ├── middleware/     # auth (JWT), error handler
 │       └── config/         # db pool, jwt, mailer
 ├── database/
-│   ├── schema.sql          # full schema (fresh installs)
-│   ├── migrate-v2.sql      # incremental migration for existing DBs
-│   └── seed.js             # demo data + admin login
+│   ├── schema.sql          # complete schema (single source of truth)
+│   └── seed.js             # demo data: real YouTube lectures + admin login
 └── DEPLOY.md               # cPanel deployment guide
 ```
 
@@ -127,8 +126,12 @@ at **Admin → Gallery**; the site displays them via Drive's image CDN
 
 ## Updating an existing database
 
+The schema is a single source of truth. For a clean rebuild (dev only — wipes data):
+
 ```bash
-mysql -u root -p mtalks_db < database/migrate-v2.sql
+mysql -u root -p -e "DROP DATABASE mtalks_db; CREATE DATABASE mtalks_db CHARACTER SET utf8mb4;"
+mysql -u root -p mtalks_db < database/schema.sql
+node database/seed.js
 ```
 
 ## Deployment
