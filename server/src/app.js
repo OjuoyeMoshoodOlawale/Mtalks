@@ -37,7 +37,8 @@ app.use(cors({
         origin.includes('ngrok')     ||
         origin.includes('ngrok-free') ||
         origin.includes('loca.lt')   ||
-        origin.includes('trycloudflare')
+        origin.includes('trycloudflare') ||
+        origin.includes('devtunnels.ms')
       ) return cb(null, true);
     }
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
