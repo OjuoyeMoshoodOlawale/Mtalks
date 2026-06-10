@@ -1,8 +1,8 @@
 /* MTalks Academy Global Design System */
 :root {
   --ma-green:#76C442; --ma-green-deep:#1D6B1D; --ma-green-dark:#0D3B15;
-  --ma-green-mid:#4A9E2C; --ma-green-tint:#EBF7DC; --ma-gold:#F0C130;
-  --ma-gold-tint:#FDF4D0; --ma-white:#FFFFFF; --ma-off-white:#F5F7F2;
+  --ma-green-mid:#4A9E2C; --ma-green-tint:#EBF7DC; --ma-gold:#D4A017;
+  --ma-gold-tint:#FDF5E0; --ma-white:#FFFFFF; --ma-off-white:#F5F7F2;
   --ma-text:#1A2B1A; --ma-text-muted:#5A7A5A; --ma-border:#D4E8C4;
   --font-heading:'Playfair Display',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif;
   --font-mono:'JetBrains Mono','Courier New',monospace;
@@ -29,8 +29,8 @@ h3{font-size:clamp(1.15rem,2.5vw,1.75rem)} p{line-height:1.75}
 .section--green{background:var(--ma-green-tint)} .section--dark{background:var(--ma-green-dark);color:var(--ma-white)}
 .btn{display:inline-flex;align-items:center;gap:var(--gap-sm);padding:12px 28px;border-radius:var(--radius-md);font-weight:600;font-size:.95rem;transition:transform var(--trans-fast),box-shadow var(--trans-fast),background var(--trans-fast)}
 .btn:active{transform:scale(.97)}
-.btn--primary{background:var(--ma-green);color:var(--ma-white);box-shadow:0 2px 8px rgba(118,196,66,.35)}
-.btn--primary:hover{background:var(--ma-green-mid);box-shadow:var(--shadow-md)}
+.btn--primary{background:var(--ma-gold);color:var(--ma-green-dark);font-weight:700;box-shadow:0 2px 10px rgba(212,160,23,.4)}
+.btn--primary:hover{background:#c4910f;color:var(--ma-white);box-shadow:0 4px 16px rgba(212,160,23,.45)}
 .btn--outline{border:2px solid var(--ma-green);color:var(--ma-green-deep);background:transparent}
 .btn--outline:hover{background:var(--ma-green-tint)}
 .btn--dark{background:var(--ma-green-dark);color:var(--ma-white)}
@@ -48,7 +48,7 @@ h3{font-size:clamp(1.15rem,2.5vw,1.75rem)} p{line-height:1.75}
 .badge--green{background:var(--ma-green-tint);color:var(--ma-green-deep)}
 .badge--gold{background:var(--ma-gold-tint);color:#7A5F00}
 .badge--dark{background:var(--ma-green-dark);color:var(--ma-white)}
-.section-tag{display:inline-block;font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ma-green-mid);margin-bottom:var(--gap-sm)}
+.section-tag{display:inline-block;font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ma-gold);margin-bottom:var(--gap-sm)}
 .section-title{margin-bottom:var(--gap-md)} .section-sub{color:var(--ma-text-muted);max-width:600px;font-size:1.05rem}
 .spinner{width:48px;height:48px;border:4px solid rgba(118,196,66,.3);border-top-color:var(--ma-green);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}

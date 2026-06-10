@@ -132,7 +132,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="about-text reveal">
-          <span class="section-tag">Meet Your Coach</span>
+          <span class="section-tag" style="color:var(--ma-green-mid)">Meet Your Coach</span>
           <h2>Coach Madinah Sanni</h2>
           <p>An experienced marriage and relationship coach with over 15 years of practical expertise helping individuals and couples build healthier relationships and stronger families.</p>
           <p style="margin-top:12px">Through personalized coaching, she has guided hundreds of clients to improve communication, resolve conflicts, restore trust, and create lasting relationships rooted in Islamic values.</p>
@@ -145,7 +145,7 @@ onMounted(() => {
   <!--  WHY CHOOSE US  -->
   <section class="section section--green">
     <div class="container text-center">
-      <span class="section-tag">Why Muhsinah Academy</span>
+      <span class="section-tag" style="color:var(--ma-green-mid)">Why Muhsinah Academy</span>
       <h2 class="section-title">What Sets Us Apart</h2>
       <div class="grid-4" style="margin-top:40px">
         <div v-for="w in whyUs" :key="w.title" class="why-card reveal">

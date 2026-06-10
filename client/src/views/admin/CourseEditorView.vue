@@ -8,7 +8,8 @@ import BaseLoader   from '@/components/common/BaseLoader.vue'
 import BaseModal    from '@/components/common/BaseModal.vue'
 import BaseButton   from '@/components/common/BaseButton.vue'
 import BaseInput    from '@/components/common/BaseInput.vue'
-import BaseConfirm  from '@/components/common/BaseConfirm.vue'
+import BaseConfirm    from '@/components/common/BaseConfirm.vue'
+import WysiwygEditor  from '@/components/common/WysiwygEditor.vue'
 import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, GripVertical, Video, FileText, Menu, HelpCircle, X } from 'lucide-vue-next'
 
 const route  = useRoute()
@@ -284,10 +285,18 @@ const saveQuiz = async () => {
     </div>
 
     <div class="form-group">
-      <label class="form-label">Lesson notes / transcript (optional)</label>
-      <textarea v-model="lesForm.content" class="form-input" rows="4" placeholder="Additional reading material, key points…"></textarea>
+      <label class="form-label">Lesson notes / transcript <span style="font-weight:400;color:var(--ma-text-muted)">(optional — students see this below the video)</span></label>
+      <WysiwygEditor v-model="lesForm.transcript"/>
     </div>
-    <BaseInput v-model="lesForm.duration_min" label="Duration (minutes)" type="number" placeholder="15"/>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <BaseInput v-model="lesForm.duration_min" label="Duration (minutes)" type="number" placeholder="15"/>
+      <div class="form-group">
+        <label class="form-label">Supplementary link label</label>
+        <input v-model="lesForm.supplementary_label" class="form-input" placeholder="e.g. Read the article"/>
+      </div>
+    </div>
+    <BaseInput v-model="lesForm.supplementary_url" label="Supplementary article URL (optional)" placeholder="https://…" style="margin-top:0"/>
     <template #footer>
       <BaseButton variant="outline" @click="lesModal=false">Cancel</BaseButton>
       <BaseButton :loading="saving" @click="saveLesson">{{ lesEdit?'Save Lesson':'Add Lesson' }}</BaseButton>
