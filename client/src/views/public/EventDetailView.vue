@@ -88,21 +88,24 @@ const pay = async () => {
     const { data } = await api.post('/payments/initialize', {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
+    const { reference, amount } = data.data
     window.PaystackPop.setup({
-      key:    paystackKey,
-      email:  auth.user.email,
-      amount: Math.round(pkgPrice(selPkg.value) * 100),
-      ref:    data.data.reference,
-      callback: async () => {
-        ui.toast('Payment confirmed!  Your ticket has been sent to your email.')
+      key:      paystackKey,
+      email:    auth.user.email,
+      amount:   Math.round(Number(pkgPrice(selPkg.value)) * 100),
+      ref:      reference,
+      currency: 'NGN',
+      callback: async (response) => {
+        ui.toast('Payment confirmed! Your ticket has been sent to your email.')
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
       },
       onClose: () => { ui.toastError('Payment was cancelled.') }
     }).openIframe()
   } catch (e) {
-    const msg = e.response?.data?.message || e.message || 'Payment failed. Please try again.'
+    const msg = e.response?.data?.message || e.message || 'Payment initialization failed. Check server PAYSTACK_SECRET_KEY.'
     ui.toastError(msg)
+    console.error('[Pay] error:', e)
   } finally { paying.value = false }
 }
 
@@ -121,11 +124,12 @@ const payAsGuest = async () => {
     })
     const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
     window.PaystackPop.setup({
-      key:    paystackKey,
-      email:  guestEmail.value.trim().toLowerCase(),
-      amount: Math.round(pkgPrice(selPkg.value) * 100),
-      ref:    data.data.reference,
-      callback: async () => {
+      key:      paystackKey,
+      email:    guestEmail.value.trim().toLowerCase(),
+      amount:   Math.round(Number(pkgPrice(selPkg.value)) * 100),
+      ref:      data.data.reference,
+      currency: 'NGN',
+      callback: async (response) => {
         ui.toast('Payment confirmed! Your ticket has been sent to ' + guestEmail.value)
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data

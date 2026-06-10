@@ -62,14 +62,10 @@ exports.initialize = async (req, res) => {
       [userId, type, item_id, amount, reference, JSON.stringify(metadata)]
     );
 
-    const txn = await initializeTransaction({
-      email: user.email,
-      amount,
-      reference,
-      metadata: { ...metadata, user_id: userId, user_name: user.name }
-    });
-
-    return created(res, { authorization_url: txn.authorization_url, reference, amount });
+    /* Return reference + amount to client.
+     * The client-side PaystackPop.setup() creates the Paystack transaction inline
+     * using the public key — no server→Paystack API call needed for the inline flow. */
+    return created(res, { reference, amount });
   } catch (err) {
     logger.error('payments.initialize', { error: err.message, route: req.originalUrl, userId });
     return serverErr(res, err, 'Payment initialization failed');
@@ -106,14 +102,8 @@ exports.initializeGuestEvent = async (req, res) => {
        JSON.stringify({ package_id, guest: true })]
     );
 
-    const txn = await initializeTransaction({
-      email:    guest_email.trim().toLowerCase(),
-      amount,
-      reference,
-      metadata: { guest_name, guest_email, event_id, package_id, type: 'event-guest' }
-    });
-
-    return created(res, { authorization_url: txn.authorization_url, reference, amount });
+    /* Client-side PaystackPop handles the Paystack transaction directly */
+    return created(res, { reference, amount });
   } catch (err) {
     logger.error('payments.initializeGuestEvent', { error: err.message });
     return serverErr(res, err, `Guest event payment failed: ${err.message}`);
