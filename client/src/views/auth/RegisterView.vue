@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
 import api from '@/services/api'
 import BaseInput  from '@/components/common/BaseInput.vue'
@@ -8,6 +8,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import { UserPlus } from 'lucide-vue-next'
 
 const router  = useRouter()
+const route   = useRoute()
 const ui      = useUiStore()
 const form    = ref({ name: '', email: '', password: '', confirm: '' })
 const errors  = ref({})
@@ -29,7 +30,15 @@ const submit = async () => {
     await api.post('/auth/register', {
       name: form.value.name.trim(), email: form.value.email, password: form.value.password
     })
-    router.push({ name: 'VerifyEmail', query: { email: form.value.email } })
+    /* Pass redirect param through to email verification so new users
+     * return to the course / event they were trying to access */
+    router.push({
+      name:  'VerifyEmail',
+      query: {
+        email:    form.value.email,
+        redirect: route.query.redirect || ''   // ← carry it forward
+      }
+    })
   } catch (err) {
     const msg = err.response?.data?.message || 'Registration failed'
     ui.toastError(msg)

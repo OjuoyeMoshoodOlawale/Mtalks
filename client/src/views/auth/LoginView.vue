@@ -71,7 +71,13 @@ const submit = async () => {
           <p v-if="errors.general" class="form-error" style="margin-bottom:12px">{{ errors.general }}</p>
           <BaseButton type="submit" :loading="loading" class="w-full" style="justify-content:center">Sign In</BaseButton>
         </form>
-        <p class="auth-footer">No account yet? <RouterLink to="/register">Create one</RouterLink></p>
+        <p v-if="route.query.redirect" style="text-align:center;font-size:.82rem;color:var(--ma-green-deep);background:var(--ma-green-tint);padding:8px;border-radius:8px;margin-bottom:12px">
+            Sign in to continue with your purchase
+          </p>
+          <p class="auth-footer">
+            No account yet?
+            <RouterLink :to="{ name: 'Register', query: { redirect: route.query.redirect } }">Create one free</RouterLink>
+          </p>
       </div>
     </div>
   </div>

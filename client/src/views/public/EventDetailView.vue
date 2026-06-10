@@ -23,8 +23,20 @@ const selPkg  = ref(null)
 const paying  = ref(false)
 
 onMounted(async () => {
-  try { const { data } = await api.get(`/events/${route.params.slug}`); event.value = data.data }
-  finally { loading.value = false }
+  try {
+    const { data } = await api.get(`/events/${route.params.slug}`)
+    event.value = data.data
+
+    /* Auto-select package when returning from login with ?pkg=ID in the URL */
+    if (route.query.pkg && event.value?.packages?.length) {
+      const pkgFromUrl = event.value.packages.find(p => String(p.id) === String(route.query.pkg))
+      if (pkgFromUrl) {
+        selPkg.value = pkgFromUrl
+        /* Clean the URL (remove ?pkg) without re-navigating */
+        router.replace({ path: route.path, query: {} })
+      }
+    }
+  } finally { loading.value = false }
 })
 
 // Dynamic SEO — updates when event data loads
@@ -43,7 +55,14 @@ const isEarlyBird = (pkg) => pkg.early_bird_price && new Date(pkg.early_bird_dea
 const pkgPrice    = (pkg) => isEarlyBird(pkg) ? pkg.early_bird_price : pkg.price
 
 const pay = async () => {
-  if (!auth.isLoggedIn) { router.push({ name: 'Login', query: { redirect: route.fullPath } }); return }
+  if (!auth.isLoggedIn) {
+    /* Preserve the selected package in the redirect URL so it's auto-selected on return */
+    const redirectPath = selPkg.value
+      ? `${route.path}?pkg=${selPkg.value.id}`
+      : route.path
+    router.push({ name: 'Login', query: { redirect: redirectPath } })
+    return
+  }
   if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
   const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
@@ -62,10 +81,10 @@ const pay = async () => {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
     window.PaystackPop.setup({
-      key: paystackKey,
-      email: auth.user.email,
+      key:    paystackKey,
+      email:  auth.user.email,
       amount: Math.round(pkgPrice(selPkg.value) * 100),
-      ref: data.data.reference,
+      ref:    data.data.reference,
       callback: async () => {
         ui.toast('Payment confirmed! 🎉 Your ticket has been sent to your email.')
         const res = await api.get(`/events/${route.params.slug}`)

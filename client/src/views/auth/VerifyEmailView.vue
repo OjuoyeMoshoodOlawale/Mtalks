@@ -23,8 +23,13 @@ const submit = async () => {
     const { data } = await api.post('/auth/verify-email', { email: email.value, otp: otp.value })
     auth.setToken(data.data.accessToken)
     auth.setUser(data.data.user)
-    ui.toast('Email verified! Welcome to MTalks Academy.')
-    router.push(data.data.user.role === 'admin' ? '/admin' : '/dashboard')
+    ui.toast('Email verified! Welcome to Muhsinah Academy. 🎉')
+    /* Redirect to original page (course/event) if one was stored, else dashboard */
+    const redirect = route.query.redirect
+    const dest = redirect && redirect !== ''
+      ? redirect
+      : (data.data.user.role === 'admin' ? '/admin' : '/dashboard')
+    router.push(dest)
   } catch (e) {
     err.value = e.response?.data?.message || 'Verification failed'
     ui.toastError(err.value)
