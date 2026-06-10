@@ -40,7 +40,7 @@ exports.create = async (req, res) => {
     if (existing) return conflict(res, 'Already enrolled in this course');
 
     const [[course]] = await db.query('SELECT * FROM courses WHERE id = ?', [course_id]);
-    if (!course) return ok(res, null);
+    if (!course) return notFound(res, 'Course not found');
 
     if (!course.is_free && course.price > 0)
       return ok(res, { requiresPayment: true, price: course.price });

@@ -16,7 +16,7 @@ exports.getAll = async (req, res) => {
     return ok(res, courses, { pagination: { page, perPage, total } });
   } catch (err) {
     logger.error('courses.getAll', { error: err.message, route: req.originalUrl });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 
@@ -61,7 +61,7 @@ exports.getOne = async (req, res) => {
     return ok(res, course);
   } catch (err) {
     logger.error('courses.getOne', { error: err.message, route: req.originalUrl });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 
@@ -77,7 +77,7 @@ exports.create = async (req, res) => {
     return created(res, { id: result.insertId, slug });
   } catch (err) {
     logger.error('courses.create', { error: err.message });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 
@@ -97,7 +97,7 @@ exports.update = async (req, res) => {
     return ok(res, { message: 'Course updated' });
   } catch (err) {
     logger.error('courses.update', { error: err.message });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 

@@ -3,10 +3,10 @@ const { ok, serverErr } = require('../utils/helpers');
 
 exports.getAll = async (req, res) => {
   try {
-    let query = `SELECT er.*, u.name AS student_name, u.email AS student_email,
+    let query = `SELECT er.*, COALESCE(u.name, er.guest_name) AS student_name, COALESCE(u.email, er.guest_email) AS student_email,
          ev.title AS event_title, ep.name AS package_name
        FROM event_registrations er
-       JOIN users u ON u.id = er.user_id
+       LEFT JOIN users u ON u.id = er.user_id
        JOIN events ev ON ev.id = er.event_id
        JOIN event_packages ep ON ep.id = er.package_id`;
     const params = [];

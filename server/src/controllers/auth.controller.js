@@ -61,7 +61,7 @@ exports.register = async (req, res) => {
     return created(res, { message: 'Account created. Check your email for your verification code.' });
   } catch (err) {
     logger.error('register error', { error: err.message, route: '/auth/register' });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 
@@ -123,7 +123,7 @@ exports.login = async (req, res) => {
     return ok(res, { accessToken, user: safeUser });
   } catch (err) {
     logger.error('login error', { error: err.message, route: '/auth/login' });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 
@@ -208,7 +208,7 @@ exports.forgotPassword = async (req, res) => {
     return ok(res, { message: 'If that email exists, a reset code was sent.' });
   } catch (err) {
     logger.error('forgotPassword error', { error: err.message });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 
@@ -233,7 +233,7 @@ exports.resetPassword = async (req, res) => {
     return ok(res, { message: 'Password reset successfully. You can now log in.' });
   } catch (err) {
     logger.error('resetPassword error', { error: err.message });
-    return serverErr(res);
+    return serverErr(res, err);
   }
 };
 

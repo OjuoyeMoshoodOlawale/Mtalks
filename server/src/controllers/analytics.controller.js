@@ -25,8 +25,8 @@ exports.getAll = async (req, res) => {
 
     // Recent 10 payments
     const [recentPayments] = await db.query(
-      `SELECT p.*, u.name AS user_name FROM payments p
-       JOIN users u ON u.id = p.user_id
+      `SELECT p.*, COALESCE(u.name, p.guest_name) AS user_name FROM payments p
+       LEFT JOIN users u ON u.id = p.user_id
        WHERE p.status='success' ORDER BY p.paid_at DESC LIMIT 10`);
 
     // Events by registrations
