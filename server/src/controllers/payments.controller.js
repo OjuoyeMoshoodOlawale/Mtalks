@@ -11,6 +11,15 @@ exports.initialize = async (req, res) => {
   const { type, item_id } = req.body;
   const userId = req.user.id;
 
+  /* Validate Paystack secret key is configured */
+  if (!process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY.includes('xxxx')) {
+    logger.error('payments.initialize', {
+      error: 'PAYSTACK_SECRET_KEY not configured in server/.env',
+      route: req.originalUrl, userId
+    });
+    return badReq(res, 'Payment is not configured. Please add PAYSTACK_SECRET_KEY to server/.env and restart.');
+  }
+
   try {
     const [[user]] = await db.query('SELECT id, name, email FROM users WHERE id = ?', [userId]);
 

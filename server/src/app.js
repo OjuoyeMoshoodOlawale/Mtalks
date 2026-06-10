@@ -71,7 +71,17 @@ app.use('/api/gallery',        require('./routes/gallery.routes'));
 
 /* ── Health check ── */
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'MTalks API is healthy', env: process.env.NODE_ENV });
+  const sk = process.env.PAYSTACK_SECRET_KEY || '';
+  res.json({
+    success:  true,
+    message:  'MTalks API is healthy',
+    env:      process.env.NODE_ENV,
+    services: {
+      database: 'connected',
+      paystack: sk && !sk.includes('xxxx') ? 'configured ✓' : '⚠️  PAYSTACK_SECRET_KEY not set',
+      email:    process.env.GMAIL_USER ? 'configured ✓' : '⚠️  GMAIL_USER not set',
+    }
+  });
 });
 
 /* ── 404 ── */

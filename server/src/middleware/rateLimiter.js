@@ -1,30 +1,42 @@
 const rateLimit = require('express-rate-limit');
 
-/* Strict: only for login/register/password endpoints — 5 attempts per minute */
+/**
+ * Skip rate limiting for authenticated requests (Bearer token present).
+ * Admin users doing bulk uploads / frequent operations should never be blocked.
+ * The rate limits mainly protect against unauthenticated bots and scrapers.
+ */
+const skipAuthenticated = (req) => {
+  const auth = req.headers.authorization;
+  return !!(auth && auth.startsWith('Bearer ') && auth.length > 20);
+};
+
+/* Strict: login/register/password endpoints — 5 per minute, unauthenticated only */
 const authLimiter = rateLimit({
-  windowMs:        60 * 1000,      // 1 minute window
-  max:             5,              // 5 attempts per window
-  standardHeaders: true,
-  legacyHeaders:   false,
-  skipSuccessfulRequests: true,    // successful logins don't count toward limit
+  windowMs:               60 * 1000,
+  max:                    5,
+  standardHeaders:        true,
+  legacyHeaders:          false,
+  skipSuccessfulRequests: true,
   message: { success: false, message: 'Too many attempts. Please wait 30 seconds and try again.' }
 });
 
-/* Medium: for refresh/me/logout — authenticated session calls */
+/* Session: refresh / me / logout — 60/min but never blocks authenticated admins */
 const sessionLimiter = rateLimit({
   windowMs:        60 * 1000,
-  max:             60,             // 60 per minute (plenty for normal use)
+  max:             60,
   standardHeaders: true,
   legacyHeaders:   false,
-  message: { success: false, message: 'Rate limit exceeded. Please slow down.' }
+  skip:            skipAuthenticated,
+  message: { success: false, message: 'Too many requests. Please slow down.' }
 });
 
-/* General: all other API routes */
+/* General: all other API routes — 200/min, authenticated users are never throttled */
 const generalLimiter = rateLimit({
   windowMs:        60 * 1000,
-  max:             120,
+  max:             200,
   standardHeaders: true,
   legacyHeaders:   false,
+  skip:            skipAuthenticated,   // ← admins bulk-uploading images never hit this
   message: { success: false, message: 'Rate limit exceeded. Please slow down.' }
 });
 
