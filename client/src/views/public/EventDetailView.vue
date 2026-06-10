@@ -59,6 +59,41 @@ const guestMode  = ref(false)
 const guestName  = ref('')
 const guestEmail = ref('')
 
+
+/* Opens Paystack inline popup; falls back to authorization_url redirect if popup unavailable */
+const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUrl, onSuccess, onCancel }) => {
+  const amountKobo = Math.round(Number(amountNaira) * 100)
+
+  if (!window.PaystackPop || typeof window.PaystackPop.setup !== 'function') {
+    // Inline script not available — use redirect fallback
+    if (authorizationUrl) { window.open(authorizationUrl, '_blank'); return }
+    ui.toastError('Payment widget unavailable. Please refresh the page and try again.')
+    return
+  }
+
+  try {
+    const handler = window.PaystackPop.setup({
+      key,
+      email,
+      amount:   amountKobo,
+      ref:      reference,
+      currency: 'NGN',
+      callback: onSuccess,
+      onClose:  onCancel
+    })
+    handler.openIframe()
+  } catch (err) {
+    console.error('[Paystack] openIframe error:', err)
+    // Fallback to hosted redirect
+    if (authorizationUrl) {
+      ui.toast('Opening payment page...')
+      window.open(authorizationUrl, '_blank')
+    } else {
+      ui.toastError('Could not open payment popup. Please refresh and try again.')
+    }
+  }
+}
+
 const pay = async () => {
   if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
@@ -88,22 +123,22 @@ const pay = async () => {
     const { data } = await api.post('/payments/initialize', {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
-    const { reference, amount } = data.data
-    window.PaystackPop.setup({
-      key:      paystackKey,
-      email:    auth.user.email,
-      amount:   Math.round(Number(pkgPrice(selPkg.value)) * 100),
-      ref:      reference,
-      currency: 'NGN',
-      callback: async (response) => {
+    const { reference, amount, authorization_url } = data.data
+    openPaystackPopup({
+      key:              paystackKey,
+      email:            auth.user.email,
+      amountNaira:      pkgPrice(selPkg.value),
+      reference,
+      authorizationUrl: authorization_url,
+      onSuccess: async () => {
         ui.toast('Payment confirmed! Your ticket has been sent to your email.')
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
       },
-      onClose: () => { ui.toastError('Payment was cancelled.') }
-    }).openIframe()
+      onCancel: () => { ui.toastError('Payment was cancelled.') }
+    })
   } catch (e) {
-    const msg = e.response?.data?.message || e.message || 'Payment initialization failed. Check server PAYSTACK_SECRET_KEY.'
+    const msg = e.response?.data?.message || e.message || 'Could not start payment. Is the server running?'
     ui.toastError(msg)
     console.error('[Pay] error:', e)
   } finally { paying.value = false }
@@ -123,20 +158,21 @@ const payAsGuest = async () => {
       package_id:  selPkg.value.id,
     })
     const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
-    window.PaystackPop.setup({
-      key:      paystackKey,
-      email:    guestEmail.value.trim().toLowerCase(),
-      amount:   Math.round(Number(pkgPrice(selPkg.value)) * 100),
-      ref:      data.data.reference,
-      currency: 'NGN',
-      callback: async (response) => {
+    const { reference, authorization_url } = data.data
+    openPaystackPopup({
+      key:              paystackKey,
+      email:            guestEmail.value.trim().toLowerCase(),
+      amountNaira:      pkgPrice(selPkg.value),
+      reference,
+      authorizationUrl: authorization_url,
+      onSuccess: async () => {
         ui.toast('Payment confirmed! Your ticket has been sent to ' + guestEmail.value)
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
         guestMode.value = false
       },
-      onClose: () => { ui.toastError('Payment was cancelled.') }
-    }).openIframe()
+      onCancel: () => { ui.toastError('Payment was cancelled.') }
+    })
   } catch (e) {
     const msg = e.response?.data?.message || e.message || 'Payment failed. Please try again.'
     ui.toastError(msg)

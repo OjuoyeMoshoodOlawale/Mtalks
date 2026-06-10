@@ -62,10 +62,20 @@ exports.initialize = async (req, res) => {
       [userId, type, item_id, amount, reference, JSON.stringify(metadata)]
     );
 
-    /* Return reference + amount to client.
-     * The client-side PaystackPop.setup() creates the Paystack transaction inline
-     * using the public key — no server→Paystack API call needed for the inline flow. */
-    return created(res, { reference, amount });
+    /* Try to pre-register with Paystack (gives us authorization_url for redirect fallback).
+     * If this fails (network, wrong key) we still return the reference so the
+     * client-side inline popup can attempt it directly. */
+    let authorization_url = null;
+    try {
+      const txn = await initializeTransaction({ email: user.email, amount, reference, metadata });
+      authorization_url = txn.authorization_url;
+    } catch (paystackErr) {
+      logger.warn('payments.initialize: Paystack pre-init failed (inline popup will try directly)', {
+        error: paystackErr.message, reference
+      });
+    }
+
+    return created(res, { reference, amount, authorization_url });
   } catch (err) {
     logger.error('payments.initialize', { error: err.message, route: req.originalUrl, userId });
     return serverErr(res, err, 'Payment initialization failed');
