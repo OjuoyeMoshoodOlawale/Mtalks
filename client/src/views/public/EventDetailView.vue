@@ -94,7 +94,7 @@ const pay = async () => {
     </div>
 
     <section class="section">
-      <div class="container" style="display:grid;grid-template-columns:1fr 360px;gap:48px;align-items:start">
+      <div class="container ev-content-grid">
         <div>
           <h2 style="margin-bottom:16px">About This Event</h2>
           <p style="white-space:pre-line;line-height:1.8;color:var(--ma-text-muted)">{{ event.description }}</p>
@@ -167,6 +167,18 @@ const pay = async () => {
 .pkg-desc{font-size:.82rem;color:var(--ma-text-muted);margin-top:8px;line-height:1.5}
 .pkg-deadline{display:flex;align-items:center;gap:4px;font-size:.75rem;color:#7A5F00;margin-top:8px}
 .early-bird-badge{position:absolute;top:-10px;right:10px;background:var(--ma-gold);color:#000;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
+.ev-content-grid{display:grid;grid-template-columns:1fr 360px;gap:48px;align-items:start}
 .register-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);padding:28px;position:sticky;top:80px;box-shadow:var(--shadow-md)}
-@media(max-width:900px){.container[style*="grid"]{display:block}.register-card{margin-top:32px;position:static}}
+.packages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+@media(max-width:960px){
+  .ev-content-grid{grid-template-columns:1fr}
+  .register-card{position:static;margin-top:32px}
+}
+@media(max-width:480px){
+  .event-hero{min-height:280px}
+  .event-hero-content{padding-bottom:28px;padding-top:60px}
+  .event-hero-content h1{font-size:1.5rem}
+  .packages-grid{grid-template-columns:1fr}
+  .pkg-price{font-size:1.25rem}
+}
 </style>

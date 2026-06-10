@@ -62,7 +62,6 @@ const fmtDate = (d) => d ? new Date(d).toLocaleString('en-NG') : '—'
         </div>
       </div>
     </div>
-  </div>
 
   <BaseModal title="Error Detail" size="lg" @close="selected=null" v-if="selected">
     <div style="font-family:var(--font-mono);font-size:.8rem;line-height:1.6">
@@ -74,19 +73,5 @@ const fmtDate = (d) => d ? new Date(d).toLocaleString('en-NG') : '—'
   </BaseModal>
 
   <BaseConfirm v-if="showDel" title="Purge old logs" message="This will delete all error logs older than 30 days. This cannot be undone." confirmText="Purge" :danger="true" :loading="purging" @confirm="purge" @cancel="showDel=false"/>
+  </div>
 </template>
-
-<style scoped>
-.admin-layout{display:flex;min-height:100vh}.admin-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.admin-topbar{background:var(--ma-white);border-bottom:1px solid var(--ma-border);padding:0 24px;height:60px;display:flex;align-items:center;gap:16px;flex-shrink:0}
-.topbar-toggle{color:var(--ma-text);display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px}.topbar-toggle:hover{background:var(--ma-green-tint)}
-.topbar-title{font-family:var(--font-heading);font-size:1.15rem;color:var(--ma-green-dark);margin:0}
-.admin-content{flex:1;padding:24px;background:var(--ma-off-white);overflow-y:auto}
-.table-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);overflow:hidden}.table-wrap{overflow-x:auto}
-.data-table{width:100%;border-collapse:collapse;font-size:.875rem}
-.data-table th{text-align:left;padding:12px 16px;font-size:.78rem;color:var(--ma-text-muted);border-bottom:2px solid var(--ma-border);font-weight:600}
-.data-table td{padding:12px 16px;border-bottom:1px solid var(--ma-border);vertical-align:middle}
-.data-table tr:last-child td{border-bottom:none}.data-table tr:hover td{background:var(--ma-off-white)}
-.action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;font-size:.78rem;background:var(--ma-off-white);border:1px solid var(--ma-border);cursor:pointer;transition:all var(--trans-fast)}
-.action-btn:hover{background:var(--ma-green-tint);color:var(--ma-green-deep)}
-</style>

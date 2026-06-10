@@ -5,7 +5,7 @@ const hpp     = require('hpp');
 const morgan  = require('morgan');
 const xssClean = require('xss-clean');
 
-const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
+const { authLimiter, sessionLimiter, generalLimiter, webhookLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -34,8 +34,18 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 
 /* ── Rate limiting ── */
-app.use('/api/auth', authLimiter);
-app.use('/api',      generalLimiter);
+/* ── Rate limiting — targeted per route type ──
+ * Only login/register/password routes get the strict limiter.
+ * Session calls (me, refresh, logout) get a generous limit to avoid
+ * locking out users during normal browsing.
+ */
+app.use('/api/auth/login',           authLimiter);
+app.use('/api/auth/register',        authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password',  authLimiter);
+app.use('/api/auth/verify-email',    authLimiter);
+app.use('/api/auth',                 sessionLimiter);   // me, refresh, logout
+app.use('/api',                      generalLimiter);   // everything else
 
 /* ── Routes ── */
 app.use('/api/auth',           require('./routes/auth.routes'));

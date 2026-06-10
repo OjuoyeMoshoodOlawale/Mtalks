@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/services/api'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
@@ -44,7 +44,13 @@ const onKey = (e) => {
   if (e.key === 'ArrowRight') lbNext()
   if (e.key === 'ArrowLeft')  lbPrev()
 }
-window.addEventListener('keydown', onKey)
+
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKey)
+})
 </script>
 
 <template>

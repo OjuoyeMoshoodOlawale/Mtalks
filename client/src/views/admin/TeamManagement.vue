@@ -59,7 +59,6 @@ const confirmDel = async () => { deleting.value=true; try { await api.delete(`/t
         </div>
       </div>
     </div>
-  </div>
   <BaseModal :title="editTarget?'Edit Member':'New Team Member'" size="lg" @close="showForm=false" v-if="showForm">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <BaseInput v-model="form.name" label="Full name" required style="grid-column:span 2"/>
@@ -79,18 +78,5 @@ const confirmDel = async () => { deleting.value=true; try { await api.delete(`/t
     </template>
   </BaseModal>
   <BaseConfirm v-if="showDel" title="Remove team member" :message="`Remove ${editTarget?.name}?`" confirmText="Remove" :danger="true" :loading="deleting" @confirm="confirmDel" @cancel="showDel=false"/>
+  </div>
 </template>
-
-<style scoped>
-.admin-layout{display:flex;min-height:100vh}.admin-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.admin-topbar{background:var(--ma-white);border-bottom:1px solid var(--ma-border);padding:0 24px;height:60px;display:flex;align-items:center;gap:16px;flex-shrink:0}
-.topbar-toggle{color:var(--ma-text);display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px}.topbar-toggle:hover{background:var(--ma-green-tint)}
-.topbar-title{font-family:var(--font-heading);font-size:1.15rem;color:var(--ma-green-dark);margin:0}
-.admin-content{flex:1;padding:24px;background:var(--ma-off-white);overflow-y:auto}
-.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
-.team-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);padding:20px;display:flex;flex-direction:column;align-items:center;text-align:center}
-.team-photo{width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:12px}
-.team-info{flex:1}
-.action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;font-size:.78rem;background:var(--ma-off-white);border:1px solid var(--ma-border);cursor:pointer;transition:all var(--trans-fast)}
-.action-btn:hover{background:var(--ma-green-tint);color:var(--ma-green-deep)}.action-btn.danger:hover{background:#fce8e8;color:#D32F2F;border-color:#D32F2F}
-</style>

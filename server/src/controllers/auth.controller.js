@@ -46,7 +46,15 @@ exports.register = async (req, res) => {
       [userId, otp, 'verify_email', expiresAt]
     );
 
-    await sendOtpEmail({ to: email, name: name.trim(), otp, type: 'verify_email' });
+    /* Send OTP email — non-blocking: registration succeeds even if email fails.
+     * In development without SMTP, log the OTP to console so testing is possible. */
+    try {
+      await sendOtpEmail({ to: email.trim().toLowerCase(), name: name.trim(), otp, type: 'verify_email' });
+    } catch (mailErr) {
+      logger.warn('register: OTP email failed (check GMAIL_USER / GMAIL_APP_PASSWORD in .env)', {
+        error: mailErr.message, otp: process.env.NODE_ENV !== 'production' ? otp : '[hidden]'
+      });
+    }
 
     return created(res, { message: 'Account created. Check your email for your verification code.' });
   } catch (err) {

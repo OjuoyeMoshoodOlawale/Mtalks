@@ -78,30 +78,11 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric'
         </div>
       </div>
     </div>
-  </div>
   <BaseConfirm v-if="showConfirm"
     :title="confirmAction==='role'?'Change role':'Toggle account'"
     :message="confirmAction==='role'?`Change ${confirmTarget?.name}'s role to ${confirmTarget?.role==='admin'?'student':'admin'}?`:`${confirmTarget?.is_active?'Disable':'Enable'} ${confirmTarget?.name}'s account?`"
     :confirmText="confirmAction==='role'?(confirmTarget?.role==='admin'?'Demote':'Promote'):(confirmTarget?.is_active?'Disable':'Enable')"
     :danger="confirmTarget?.is_active&&confirmAction==='toggle'"
     @confirm="doAction" @cancel="showConfirm=false"/>
+  </div>
 </template>
-<style scoped>
-.admin-layout{display:flex;min-height:100vh}.admin-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.admin-topbar{background:var(--ma-white);border-bottom:1px solid var(--ma-border);padding:0 24px;height:60px;display:flex;align-items:center;gap:16px;flex-shrink:0}
-.topbar-toggle{color:var(--ma-text);display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px}.topbar-toggle:hover{background:var(--ma-green-tint)}
-.topbar-title{font-family:var(--font-heading);font-size:1.15rem;color:var(--ma-green-dark);margin:0}
-.admin-content{flex:1;padding:24px;background:var(--ma-off-white);overflow-y:auto}
-.filters-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
-.search-wrap{position:relative;flex:1;min-width:200px}.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ma-text-muted)}
-.search-input{width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--ma-border);border-radius:var(--radius-md);font-size:.875rem}.search-input:focus{border-color:var(--ma-green);outline:none}
-.table-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);overflow:hidden}.table-wrap{overflow-x:auto}
-.data-table{width:100%;border-collapse:collapse;font-size:.875rem}
-.data-table th{text-align:left;padding:12px 16px;font-size:.78rem;color:var(--ma-text-muted);border-bottom:2px solid var(--ma-border);font-weight:600}
-.data-table td{padding:12px 16px;border-bottom:1px solid var(--ma-border);vertical-align:middle}
-.data-table tr:last-child td{border-bottom:none}.data-table tr:hover td{background:var(--ma-off-white)}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--ma-green-tint);color:var(--ma-green-deep);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
-.action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;font-size:.78rem;background:var(--ma-off-white);color:var(--ma-text);border:1px solid var(--ma-border);cursor:pointer;transition:all var(--trans-fast)}
-.action-btn:hover{background:var(--ma-green-tint);color:var(--ma-green-deep);border-color:var(--ma-green)}
-.action-btn.danger:hover{background:#fce8e8;color:#D32F2F;border-color:#D32F2F}
-</style>
