@@ -167,11 +167,19 @@ module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEvent
 
 /** Contact form notification to admin */
 async function sendContactNotification ({ name, email, subject, message }) {
-  const adminEmail = process.env.GMAIL_USER;
-  if (!adminEmail) return;
+  // Primary recipient = site_email from settings (Coach Madinah's inbox)
+  // Fallback = GMAIL_USER (the sending account) if settings not available
+  let recipientEmail = process.env.GMAIL_USER;
+  try {
+    const db = require('../config/db');
+    const [[row]] = await db.query("SELECT `value` FROM settings WHERE `key` = 'site_email'");
+    if (row?.value) recipientEmail = row.value;
+  } catch { /* use fallback */ }
+
+  if (!recipientEmail) return;
   await transporter.sendMail({
-    from: MAIL_FROM,
-    to:   adminEmail,
+    from:    MAIL_FROM,
+    to:      recipientEmail,
     replyTo: email,
     subject: `[Muhsinah Academy] New Message: ${subject}`,
     html: base(`
