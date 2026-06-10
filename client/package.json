@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@lottiefiles/dotlottie-vue": "^0.3.5",
-    "@vueup/vue-quill": "^1.5.3",
     "@vueuse/core": "^10.9.0",
     "axios": "^1.6.8",
     "chart.js": "^4.4.2",

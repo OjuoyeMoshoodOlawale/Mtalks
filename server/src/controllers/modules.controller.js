@@ -10,7 +10,7 @@ exports.getAll = async (req, res) => {
       'SELECT * FROM modules WHERE course_id = ? ORDER BY sort_order ASC', [course_id]);
     for (const m of modules) {
       const [lessons] = await db.query(
-        'SELECT id, title, duration_min, sort_order FROM lessons WHERE module_id = ? ORDER BY sort_order ASC', [m.id]);
+        'SELECT id, title, drive_file_id, video_type, duration_min, sort_order, content, transcript, supplementary_url, supplementary_label FROM lessons WHERE module_id = ? ORDER BY sort_order ASC', [m.id]);
       const [evals] = await db.query('SELECT id, title, pass_score FROM evaluations WHERE module_id = ?', [m.id]);
       m.lessons = lessons;
       m.evaluation = evals[0] || null;

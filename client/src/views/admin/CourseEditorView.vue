@@ -29,13 +29,15 @@ const openMod  = ref(null)
 const fetchCourse = async () => {
   loading.value = true
   try {
-    const { data: d } = await api.get('/enrollments/my')
-    const { data } = await api.get(`/courses?page=1&limit=100`)
-    course.value = data.data.find(c => c.id == route.params.id) || null
-    if (!course.value) { const { data: d2 } = await api.get(`/courses/${route.params.id}`); course.value = d2.data }
-    const { data: m } = await api.get(`/modules?course_id=${route.params.id}`)
-    modules.value = m.data
-  } finally { loading.value = false }
+    // Load course details + modules with full lesson data in one go
+    const [courseRes, modulesRes] = await Promise.all([
+      api.get(`/courses/${route.params.id}`),
+      api.get(`/modules?course_id=${route.params.id}`)
+    ])
+    course.value  = courseRes.data.data
+    modules.value = modulesRes.data.data || []
+  } catch (e) { ui.toastError('Could not load course') }
+  finally { loading.value = false }
 }
 onMounted(fetchCourse)
 
