@@ -74,6 +74,13 @@ api.interceptors.response.use(
       }
     }
 
+    /* Network errors (server offline, CORS, ECONNREFUSED) */
+    if (!err.response) {
+      const networkErr = new Error('Cannot reach the server. Please check your connection or try again later.')
+      networkErr.isNetworkError = true
+      return Promise.reject(networkErr)
+    }
+
     return Promise.reject(err)
   }
 )

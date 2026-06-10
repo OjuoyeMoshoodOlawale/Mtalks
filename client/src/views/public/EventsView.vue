@@ -76,7 +76,7 @@ const lowestPrice = (event) => {
                 <span class="event-price">₦{{ lowestPrice(ev)?.toLocaleString() }}</span>
                 <span v-if="ev.packages.some(p=>isEarlyBird(p))" class="badge badge--gold" style="margin-left:6px">Early Bird</span>
               </div>
-              <span class="event-cta">Register <ChevronRight :size="16" /></span>
+              <span class="event-cta">Pay Now <ChevronRight :size="16" /></span>
             </div>
           </div>
         </RouterLink>

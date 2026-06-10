@@ -42,13 +42,9 @@ watch(event, (e) => {
 const isEarlyBird = (pkg) => pkg.early_bird_price && new Date(pkg.early_bird_deadline) > new Date()
 const pkgPrice    = (pkg) => isEarlyBird(pkg) ? pkg.early_bird_price : pkg.price
 
-const register = async () => {
-  if (!auth.isLoggedIn) { router.push({ name: 'Login', query: { redirect: route.fullPath } }); return }
-  showPkg.value = true
-}
-
 const pay = async () => {
-  if (!selPkg.value) { ui.toastError('Select a package first'); return }
+  if (!auth.isLoggedIn) { router.push({ name: 'Login', query: { redirect: route.fullPath } }); return }
+  if (!selPkg.value) { ui.toastError('Please select a package first'); return }
   paying.value = true
   try {
     const { data } = await api.post('/payments/initialize', {
@@ -60,14 +56,13 @@ const pay = async () => {
       amount: Math.round(pkgPrice(selPkg.value) * 100),
       ref: data.data.reference,
       callback: async () => {
-        showPkg.value = false
-        ui.toast('Payment confirmed! Your ticket has been sent to your email.')
+        ui.toast('Payment confirmed! Your ticket has been sent to your email. 🎉')
         const res = await api.get(`/events/${route.params.slug}`)
         event.value = res.data.data
       },
       onClose: () => {}
     }).openIframe()
-  } catch (e) { ui.toastError(e.response?.data?.message || 'Payment failed') }
+  } catch (e) { ui.toastError(e.response?.data?.message || 'Payment failed. Please try again.') }
   finally { paying.value = false }
 }
 </script>
@@ -126,18 +121,48 @@ const pay = async () => {
             </div>
           </template>
           <template v-else>
-            <p style="font-weight:700;font-size:1.05rem;margin-bottom:16px;color:var(--ma-green-dark)">Register for this event</p>
-            <div v-if="selPkg" style="margin-bottom:16px;padding:12px;background:var(--ma-green-tint);border-radius:var(--radius-md)">
-              <p style="font-size:.85rem;font-weight:600;color:var(--ma-green-deep)">{{ selPkg.name }}</p>
-              <p style="font-size:1.3rem;font-weight:700;color:var(--ma-green-dark)">₦{{ Number(pkgPrice(selPkg)).toLocaleString() }}</p>
+            <p style="font-weight:700;font-size:1.05rem;margin-bottom:16px;color:var(--ma-green-dark)">Select a Package</p>
+
+            <div v-if="!event.packages?.length" style="color:var(--ma-text-muted);font-size:.88rem">
+              No packages available yet.
             </div>
-            <BaseButton v-if="event.packages?.length" @click="register" :loading="paying" class="w-full" style="justify-content:center">
-              {{ selPkg ? 'Proceed to Payment' : 'Select a Package Below' }}
-            </BaseButton>
-            <BaseButton v-if="selPkg" @click="pay" :loading="paying" class="w-full" style="justify-content:center;margin-top:8px">
-              Pay ₦{{ Number(pkgPrice(selPkg)).toLocaleString() }} Now
-            </BaseButton>
-            <p style="font-size:.78rem;color:var(--ma-text-muted);margin-top:12px;text-align:center">Secured by Paystack · WhatsApp link sent by email</p>
+
+            <div v-else>
+              <!-- Package selector (visible, no modal) -->
+              <div class="reg-pkg-list">
+                <label
+                  v-for="pkg in event.packages" :key="pkg.id"
+                  class="reg-pkg-option"
+                  :class="{ selected: selPkg?.id === pkg.id }"
+                >
+                  <input type="radio" :value="pkg" v-model="selPkg" style="accent-color:var(--ma-green)" />
+                  <div class="reg-pkg-info">
+                    <p class="reg-pkg-name">{{ pkg.name }}</p>
+                    <p class="reg-pkg-price">
+                      ₦{{ Number(pkgPrice(pkg)).toLocaleString() }}
+                      <s v-if="isEarlyBird(pkg)" style="color:var(--ma-text-muted);font-size:.8rem;font-weight:400">
+                        ₦{{ Number(pkg.price).toLocaleString() }}
+                      </s>
+                    </p>
+                    <p v-if="isEarlyBird(pkg)" class="reg-pkg-early">Early-bird ends {{ new Date(pkg.early_bird_deadline).toLocaleDateString("en-NG",{day:"numeric",month:"short"}) }}</p>
+                    <p v-if="pkg.description" class="reg-pkg-desc">{{ pkg.description }}</p>
+                  </div>
+                </label>
+              </div>
+
+              <BaseButton
+                @click="pay"
+                :loading="paying"
+                :disabled="!selPkg"
+                class="w-full"
+                style="justify-content:center;margin-top:16px;font-size:1rem;padding:14px"
+              >
+                Pay {{ selPkg ? "₦" + Number(pkgPrice(selPkg)).toLocaleString() : "" }} Now
+              </BaseButton>
+              <p style="font-size:.75rem;color:var(--ma-text-muted);margin-top:10px;text-align:center">
+                🔒 Secured by Paystack · Your ticket is sent to your email
+              </p>
+            </div>
           </template>
           <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--ma-border);font-size:.82rem;color:var(--ma-text-muted)">
             <p style="margin-bottom:6px"><strong>Registration deadline:</strong> {{ new Date(event.deadline).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'}) }}</p>
@@ -167,11 +192,27 @@ const pay = async () => {
 .pkg-desc{font-size:.82rem;color:var(--ma-text-muted);margin-top:8px;line-height:1.5}
 .pkg-deadline{display:flex;align-items:center;gap:4px;font-size:.75rem;color:#7A5F00;margin-top:8px}
 .early-bird-badge{position:absolute;top:-10px;right:10px;background:var(--ma-gold);color:#000;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
+.reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
+.reg-pkg-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid var(--ma-border);border-radius:var(--radius-md);cursor:pointer;transition:all .15s}
+.reg-pkg-option.selected{border-color:var(--ma-green);background:var(--ma-green-tint)}
+.reg-pkg-info{flex:1}
+.reg-pkg-name{font-weight:700;color:var(--ma-green-dark);font-size:.9rem;margin-bottom:2px}
+.reg-pkg-price{font-family:var(--font-heading);font-size:1.15rem;font-weight:700;color:var(--ma-green-dark);display:flex;align-items:center;gap:8px}
+.reg-pkg-early{font-size:.72rem;color:var(--ma-gold);font-weight:600;margin-top:2px}
+.reg-pkg-desc{font-size:.78rem;color:var(--ma-text-muted);margin-top:4px}
 .ev-content-grid{display:grid;grid-template-columns:1fr 360px;gap:48px;align-items:start}
 .register-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);padding:28px;position:sticky;top:80px;box-shadow:var(--shadow-md)}
 .packages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 @media(max-width:960px){
-  .ev-content-grid{grid-template-columns:1fr}
+  .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
+.reg-pkg-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid var(--ma-border);border-radius:var(--radius-md);cursor:pointer;transition:all .15s}
+.reg-pkg-option.selected{border-color:var(--ma-green);background:var(--ma-green-tint)}
+.reg-pkg-info{flex:1}
+.reg-pkg-name{font-weight:700;color:var(--ma-green-dark);font-size:.9rem;margin-bottom:2px}
+.reg-pkg-price{font-family:var(--font-heading);font-size:1.15rem;font-weight:700;color:var(--ma-green-dark);display:flex;align-items:center;gap:8px}
+.reg-pkg-early{font-size:.72rem;color:var(--ma-gold);font-weight:600;margin-top:2px}
+.reg-pkg-desc{font-size:.78rem;color:var(--ma-text-muted);margin-top:4px}
+.ev-content-grid{grid-template-columns:1fr}
   .register-card{position:static;margin-top:32px}
 }
 @media(max-width:480px){

@@ -108,7 +108,8 @@ const fmt = (n) => `₦${Number(n).toLocaleString()}`
                   </td>
                   <td>
                     <div style="display:flex;gap:8px">
-                      <RouterLink :to="`/admin/courses/${c.id}/edit`" class="action-btn" title="Edit curriculum"><Pencil :size="16"/></RouterLink>
+                      <RouterLink :to="`/courses/${c.slug}`" target="_blank" class="action-btn" title="Preview as student"><Eye :size="14"/> Preview</RouterLink>
+                      <RouterLink :to="`/admin/courses/${c.id}/edit`" class="action-btn" title="Edit curriculum"><Pencil :size="16"/> Curriculum</RouterLink>
                       <button @click="openEdit(c)" class="action-btn" title="Edit details"><Pencil :size="16"/> Info</button>
                       <button @click="openDelete(c)" class="action-btn danger" title="Delete"><Trash2 :size="16"/></button>
                     </div>
