@@ -12,12 +12,37 @@ const app = express();
 
 /* ── Security ── */
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+/* ── CORS ─────────────────────────────────────────────────────────────────── */
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_URL  || 'http://localhost:5173',
+  'https://muhsinahacademy.com',
+  'https://www.muhsinahacademy.com',
+  /* Support extra origins for staging / port-forwarding from env */
+  ...(process.env.EXTRA_ORIGINS
+    ? process.env.EXTRA_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+    : []),
+];
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    'https://muhsinahacademy.com',
-    'https://www.muhsinahacademy.com'
-  ],
+  origin: (origin, cb) => {
+    /* Allow same-origin requests (Postman, curl, direct server calls) */
+    if (!origin) return cb(null, true);
+    /* In development, allow any localhost/LAN/ngrok origin automatically */
+    if (process.env.NODE_ENV !== 'production') {
+      if (
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.includes('192.168.')  ||
+        origin.includes('10.0.')     ||
+        origin.includes('ngrok')     ||
+        origin.includes('ngrok-free') ||
+        origin.includes('loca.lt')   ||
+        origin.includes('trycloudflare')
+      ) return cb(null, true);
+    }
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS']
 }));

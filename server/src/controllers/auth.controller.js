@@ -8,7 +8,7 @@ const logger   = require('../utils/logger');
 const COOKIE_OPTS = {
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',  // lax allows LAN/port-forwarding in dev
   maxAge:   7 * 24 * 60 * 60 * 1000
 };
 

@@ -11,8 +11,13 @@ export default defineConfig({
 
   server: {
     port: 5173,
+    host: true,          // bind 0.0.0.0 — required for port forwarding / LAN access
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true }
+      '/api': {
+        target:       'http://localhost:5000',
+        changeOrigin: true,
+        ws:           true,  // proxy websockets if needed
+      }
     }
   },
 

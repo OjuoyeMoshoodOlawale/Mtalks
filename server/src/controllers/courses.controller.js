@@ -32,7 +32,7 @@ exports.getOne = async (req, res) => {
 
     for (const mod of modules) {
       const [lessons] = await db.query(
-        'SELECT id, title, duration_min, sort_order, content, transcript, supplementary_url, supplementary_label FROM lessons WHERE module_id = ? ORDER BY sort_order ASC',
+        'SELECT id, title, duration_min, sort_order, content, transcript, supplementary_url, supplementary_label, drive_file_id, video_type FROM lessons WHERE module_id = ? ORDER BY sort_order ASC',
         [mod.id]
       );
       mod.lessons = lessons;
