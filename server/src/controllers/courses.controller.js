@@ -22,7 +22,13 @@ exports.getAll = async (req, res) => {
 
 exports.getOne = async (req, res) => {
   try {
-    const [[course]] = await db.query('SELECT * FROM courses WHERE slug = ?', [req.params.slug]);
+    /* Accept both numeric ID (from admin editor) and slug (from public pages) */
+    const param = req.params.slug;
+    const isId  = /^\d+$/.test(param);
+    const [[course]] = await db.query(
+      isId ? 'SELECT * FROM courses WHERE id = ?' : 'SELECT * FROM courses WHERE slug = ?',
+      [param]
+    );
     if (!course) return notFound(res, 'Course not found');
 
     const [modules] = await db.query(
