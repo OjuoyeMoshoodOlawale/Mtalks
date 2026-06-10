@@ -12,6 +12,7 @@ router.post('/register',
   ctrl.register
 );
 
+router.post('/resend-otp',    ctrl.resendOtp);
 router.post('/verify-email',
   body('email').isEmail().normalizeEmail(),
   body('otp').notEmpty().withMessage('OTP is required'),

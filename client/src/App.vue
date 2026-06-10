@@ -26,8 +26,7 @@ onMounted(async () => {
   // Load Crisp chat widget if website ID is set in admin Settings
   try {
     const { data } = await api.get('/settings/public')
-    const raw = Array.isArray(data.data) ? data.data : []
-    const settings = Object.fromEntries(raw.map(s => [s.key, s.value]))
+    const settings = data.data || {}
     const crispId = settings.crisp_website_id
     if (crispId && crispId.trim()) {
       crispActive.value = true

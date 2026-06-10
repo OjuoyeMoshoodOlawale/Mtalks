@@ -105,5 +105,13 @@ const submit = async () => {
 .forgot-link:hover{text-decoration:underline}
 .auth-footer{text-align:center;margin-top:20px;font-size:.875rem;color:var(--ma-text-muted)}
 .auth-footer a{color:var(--ma-green-deep);font-weight:600}
-@media(max-width:768px){.auth-left{display:none}}
+@media(max-width:768px){
+  .auth-left{display:none}
+  .auth-right{padding:20px 16px;min-height:100vh;align-items:flex-start;padding-top:32px}
+  .auth-card{padding:24px 20px;border-radius:var(--radius-lg);max-width:100%}
+}
+@media(max-width:480px){
+  .auth-right{padding:16px 12px;padding-top:24px}
+  .auth-card{padding:20px 16px;box-shadow:none;border:1px solid var(--ma-border)}
+}
 </style>

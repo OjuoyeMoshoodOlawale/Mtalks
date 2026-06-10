@@ -40,7 +40,9 @@ exports.register = async (req, res) => {
     const userId = result.insertId;
 
     const otp = genOtp();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    // Clear any previous unused OTPs for this user
+    await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [userId, 'verify_email']);
     await db.query(
       'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
       [userId, otp, 'verify_email', expiresAt]
@@ -147,6 +149,44 @@ exports.logout = (req, res) => {
   return ok(res, { message: 'Logged out successfully' });
 };
 
+
+/* ── Resend OTP ── */
+exports.resendOtp = async (req, res) => {
+  const { email, type = 'verify_email' } = req.body;
+  if (!email) return badReq(res, 'Email is required');
+  try {
+    const [users] = await db.query(
+      'SELECT id, name, is_verified FROM users WHERE email = ?',
+      [email.toLowerCase().trim()]
+    );
+    if (!users.length) return badReq(res, 'No account found with that email');
+    const user = users[0];
+    if (type === 'verify_email' && user.is_verified)
+      return badReq(res, 'This account is already verified. Please sign in.');
+
+    const otp       = genOtp();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    // Invalidate old OTPs, then insert fresh one
+    await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [user.id, type]);
+    await db.query(
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+      [user.id, otp, type, expiresAt]
+    );
+
+    try {
+      await sendOtpEmail({ to: email.toLowerCase().trim(), name: user.name, otp, type });
+    } catch (mailErr) {
+      logger.warn('resendOtp: email failed', {
+        error: mailErr.message,
+        otp:   process.env.NODE_ENV !== 'production' ? otp : '[hidden]'
+      });
+    }
+
+    return ok(res, { message: 'A fresh verification code has been sent to your email.' });
+  } catch (err) { return serverErr(res, err, 'Resend failed'); }
+};
+
 /* ── Forgot Password ── */
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
@@ -157,7 +197,7 @@ exports.forgotPassword = async (req, res) => {
 
     const { id, name } = users[0];
     const otp       = genOtp();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
     await db.query(
       'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',

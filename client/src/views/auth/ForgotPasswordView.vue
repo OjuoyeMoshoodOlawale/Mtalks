@@ -38,8 +38,8 @@ const reset = async () => {
 </script>
 
 <template>
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ma-green-dark);padding:24px">
-    <div style="background:var(--ma-white);border-radius:var(--radius-xl);padding:48px 40px;width:100%;max-width:420px;box-shadow:var(--shadow-lg)">
+  <div style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;background:var(--ma-green-dark);padding:24px;padding-top:max(24px,5vh)">
+    <div style="background:var(--ma-white);border-radius:var(--radius-xl);padding:clamp(24px,5vw,48px) clamp(20px,5vw,40px);width:100%;max-width:420px;box-shadow:var(--shadow-lg)">
       <div style="text-align:center;margin-bottom:28px">
         <KeyRound :size="36" color="var(--ma-green-deep)" />
         <h2 style="color:var(--ma-green-dark);margin:12px 0 6px">Reset password</h2>

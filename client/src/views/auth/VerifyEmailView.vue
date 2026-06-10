@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore }   from '@/stores/ui'
@@ -42,10 +42,11 @@ const resend = async () => {
     ui.toast('New code sent to your email')
   } catch (_) {}
 }
+onUnmounted(() => { if (cooldownTimer) clearInterval(cooldownTimer) })
 </script>
 
 <template>
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ma-green-dark);padding:24px">
+  <div style="min-height:100vh;align-items:flex-start;padding-top:max(24px,5vh);display:flex;align-items:center;justify-content:center;background:var(--ma-green-dark);padding:24px">
     <div style="background:var(--ma-white);border-radius:var(--radius-xl);padding:48px 40px;width:100%;max-width:440px;text-align:center;box-shadow:var(--shadow-lg)">
       <div style="width:72px;height:72px;background:var(--ma-green-tint);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
         <Mail :size="32" color="var(--ma-green-deep)" />
@@ -69,7 +70,15 @@ const resend = async () => {
         </BaseButton>
       </form>
       <p style="margin-top:20px;font-size:.85rem;color:var(--ma-text-muted)">
-        Didn't receive it? <button @click="resend" style="color:var(--ma-green-deep);font-weight:600;background:none;cursor:pointer">Resend code</button>
+        Didn't receive it?
+        <button
+          @click="resend"
+          :disabled="resending || resendCooldown > 0"
+          style="background:none;cursor:pointer;font-weight:600"
+          :style="{ color: resendCooldown > 0 ? 'var(--ma-text-muted)' : 'var(--ma-green-deep)' }"
+        >
+          {{ resending ? 'Sending…' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code' }}
+        </button>
       </p>
       <RouterLink to="/login" style="display:block;margin-top:16px;font-size:.85rem;color:var(--ma-text-muted)">← Back to sign in</RouterLink>
     </div>

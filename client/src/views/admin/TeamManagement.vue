@@ -43,20 +43,45 @@ const confirmDel = async () => { deleting.value=true; try { await api.delete(`/t
       </div>
       <div class="admin-content">
         <BaseLoader v-if="loading" style="padding:40px"/>
-        <div v-else class="team-grid">
-          <div v-if="!team.length" style="grid-column:1/-1;text-align:center;padding:40px"><Users :size="48" color="var(--ma-border)"/><p style="color:var(--ma-text-muted);margin-top:10px">No team members yet.</p></div>
-          <div v-for="m in team" :key="m.id" class="team-card">
-            <img :src="m.photo||'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=70&auto=format'" :alt="m.name" class="team-photo"/>
-            <div class="team-info">
-              <p style="font-weight:700;color:var(--ma-green-dark);margin:0">{{ m.name }}</p>
-              <p style="font-size:.82rem;color:var(--ma-text-muted);margin:2px 0">{{ m.role }}</p>
-            </div>
-            <div style="display:flex;gap:6px;margin-top:12px">
-              <button @click="openEdit(m)" class="action-btn"><Pencil :size="14"/> Edit</button>
-              <button @click="editTarget=m;showDel=true" class="action-btn danger"><Trash2 :size="14"/></button>
-            </div>
+        <div v-if="!team.length" style="background:var(--ma-white);border-radius:var(--radius-lg);padding:48px;text-align:center;color:var(--ma-text-muted)">
+            No team members yet.
           </div>
-        </div>
+          <div v-else class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="td-num">#</th>
+                  <th>Member</th>
+                  <th>Role</th>
+                  <th>Bio</th>
+                  <th class="td-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(m, i) in team" :key="m.id">
+                  <td class="td-num">{{ i + 1 }}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <img :src="m.photo || 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=70&auto=format'"
+                        :alt="m.name"
+                        style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0"/>
+                      <span style="font-weight:700;color:var(--ma-green-dark)">{{ m.name }}</span>
+                    </div>
+                  </td>
+                  <td><span class="table-badge table-badge--green">{{ m.role }}</span></td>
+                  <td style="color:var(--ma-text-muted);font-size:.82rem;max-width:240px">
+                    {{ m.bio?.slice(0,80) }}{{ m.bio?.length > 80 ? '…' : '' }}
+                  </td>
+                  <td class="td-actions">
+                    <div style="display:flex;gap:6px;justify-content:flex-end">
+                      <button @click="openEdit(m)" class="action-btn"><Pencil :size="14"/> Edit</button>
+                      <button @click="editTarget=m;showDel=true" class="action-btn danger"><Trash2 :size="14"/></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
       </div>
     </div>
   <BaseModal :title="editTarget?'Edit Member':'New Team Member'" size="lg" @close="showForm=false" v-if="showForm">

@@ -15,8 +15,14 @@ exports.getPublic = async (req, res) => {
       `SELECT \`key\`, \`value\` FROM settings WHERE \`key\` IN (${placeholders})`,
       PUBLIC_KEYS
     );
-    return ok(res, rows);
-  } catch (err) { return serverErr(res, err, 'Server error'); }
+    // Return as key→value object (consistent with getAll + easier for frontend)
+    const obj = {};
+    rows.forEach(r => { obj[r.key] = r.value; });
+    return ok(res, obj);
+  } catch (err) {
+    // Table may not exist yet (before first seed) — return empty object, not 500
+    return ok(res, {});
+  }
 };
 
 exports.getAll = async (req, res) => {
