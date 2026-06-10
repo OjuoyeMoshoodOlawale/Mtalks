@@ -1,11 +1,12 @@
 <script setup>
 import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { LayoutDashboard, BookOpen, Ticket, User, ChevronRight } from 'lucide-vue-next'
+import { LayoutDashboard, BookOpen, Ticket, User, ChevronRight, LogOut } from 'lucide-vue-next'
 
-const route = useRoute()
-const auth  = useAuthStore()
+const route  = useRoute()
+const router = useRouter()
+const auth   = useAuthStore()
 
 const initials = (name) => {
   if (!name) return 'U'
@@ -21,11 +22,17 @@ const links = [
 ]
 
 const isActive = (l) => l.exact ? route.path === l.to : route.path.startsWith(l.to)
+
+const logout = () => {
+  auth.logout()
+  router.push({ name: 'Login' })
+}
 </script>
 
 <template>
   <nav class="student-nav">
     <div class="container student-nav__inner">
+
       <!-- Greeting + avatar -->
       <div class="student-nav__identity">
         <div class="s-avatar">{{ initials(auth.user?.name) }}</div>
@@ -46,10 +53,19 @@ const isActive = (l) => l.exact ? route.path === l.to : route.path.startsWith(l.
         </RouterLink>
       </div>
 
-      <!-- Admin shortcut -->
-      <RouterLink v-if="auth.isAdmin" to="/admin" class="s-admin-link">
-        Admin Panel <ChevronRight :size="14" />
-      </RouterLink>
+      <div class="student-nav__actions">
+        <!-- Admin shortcut -->
+        <RouterLink v-if="auth.isAdmin" to="/admin" class="s-admin-link">
+          Admin <ChevronRight :size="14" />
+        </RouterLink>
+
+        <!-- Logout -->
+        <button class="s-logout-btn" @click="logout" title="Sign out">
+          <LogOut :size="16" />
+          <span class="s-logout-label">Sign out</span>
+        </button>
+      </div>
+
     </div>
   </nav>
 </template>
@@ -59,16 +75,14 @@ const isActive = (l) => l.exact ? route.path === l.to : route.path.startsWith(l.
   background: var(--ma-white);
   border-bottom: 1px solid var(--ma-border);
   position: sticky;
-  top: 64px;   /* sits just below PublicHeader */
+  top: 64px;
   z-index: 90;
   box-shadow: 0 2px 8px rgba(0,0,0,.04);
 }
 .student-nav__inner {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding-top: 0;
-  padding-bottom: 0;
+  gap: 16px;
   height: 52px;
   overflow-x: auto;
 }
@@ -81,42 +95,48 @@ const isActive = (l) => l.exact ? route.path === l.to : route.path.startsWith(l.
   display: flex; align-items: center; justify-content: center;
 }
 .s-name { font-size: .82rem; font-weight: 600; color: var(--ma-text-muted); white-space: nowrap; }
-/* Divider */
 .student-nav__identity::after {
-  content: '';
-  display: block;
-  width: 1px;
-  height: 20px;
-  background: var(--ma-border);
-  margin-left: 8px;
+  content: ''; display: block;
+  width: 1px; height: 20px; background: var(--ma-border); margin-left: 8px;
 }
 /* Links */
-.student-nav__links { display: flex; align-items: center; gap: 2px; flex: 1; }
+.student-nav__links { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; }
 .s-link {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: .83rem; font-weight: 500;
-  color: var(--ma-text-muted);
-  text-decoration: none;
-  white-space: nowrap;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: .83rem; font-weight: 500; color: var(--ma-text-muted);
+  text-decoration: none; white-space: nowrap;
   transition: background var(--trans-fast), color var(--trans-fast);
 }
-.s-link:hover    { background: var(--ma-green-tint); color: var(--ma-green-deep); }
-.s-link.is-active{ background: var(--ma-green);      color: var(--ma-white); font-weight: 600; }
-/* Admin link */
+.s-link:hover     { background: var(--ma-green-tint); color: var(--ma-green-deep); }
+.s-link.is-active { background: var(--ma-green);      color: var(--ma-white); font-weight: 600; }
+/* Right side actions */
+.student-nav__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 .s-admin-link {
   display: flex; align-items: center; gap: 4px;
-  margin-left: auto; flex-shrink: 0;
-  font-size: .78rem; font-weight: 600;
-  color: var(--ma-green-deep);
-  text-decoration: none;
-  padding: 4px 10px;
-  border: 1px solid var(--ma-green);
-  border-radius: 12px;
+  font-size: .78rem; font-weight: 600; color: var(--ma-green-deep);
+  text-decoration: none; padding: 4px 10px;
+  border: 1px solid var(--ma-green); border-radius: 12px;
   transition: background var(--trans-fast);
 }
 .s-admin-link:hover { background: var(--ma-green-tint); }
-/* Scrollbar on mobile */
+/* Logout */
+.s-logout-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: .82rem; font-weight: 600; cursor: pointer;
+  color: var(--ma-text-muted); background: none;
+  border: 1px solid var(--ma-border);
+  transition: all var(--trans-fast);
+}
+.s-logout-btn:hover { color: #dc2626; border-color: #fca5a5; background: #fff1f2; }
+/* Hide text label on small screens */
+@media(max-width: 600px) {
+  .s-logout-label { display: none; }
+  .s-logout-btn   { padding: 5px 8px; }
+  .s-name         { display: none; }
+}
+/* Scrollbar hidden on mobile */
 .student-nav__inner::-webkit-scrollbar { display: none; }
+.student-nav__links::-webkit-scrollbar { display: none; }
 </style>

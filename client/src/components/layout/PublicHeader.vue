@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 import { Menu, X, User, LogOut } from 'lucide-vue-next'
 
 const auth   = useAuthStore()
@@ -45,7 +46,10 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
       <!-- CTA -->
       <div class="header-cta hide-mobile flex items-center gap-md">
         <RouterLink v-if="auth.isLoggedIn && auth.isAdmin" to="/admin" class="btn btn--sm btn--outline">Dashboard</RouterLink>
-        <RouterLink v-else-if="auth.isLoggedIn" to="/dashboard" class="btn btn--sm btn--outline">My Courses</RouterLink>
+        <template v-else-if="auth.isLoggedIn">
+          <RouterLink to="/dashboard" class="btn btn--sm btn--outline">My Courses</RouterLink>
+          <button @click="logout" class="btn btn--sm btn--ghost" style="color:var(--ma-text-muted)">Sign Out</button>
+        </template>
         <RouterLink v-else to="/login" class="btn btn--sm btn--outline">Sign In</RouterLink>
         <RouterLink to="/consultation" class="btn btn--sm btn--primary">Book Consultation</RouterLink>
       </div>
@@ -68,6 +72,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
         <RouterLink to="/consultation" class="btn btn--primary w-full text-center" @click="open = false">Book Consultation</RouterLink>
         <RouterLink v-if="!auth.isLoggedIn" to="/login" class="btn btn--outline w-full text-center" @click="open = false">Sign In</RouterLink>
         <RouterLink v-else to="/dashboard" class="btn btn--outline w-full text-center" @click="open = false">My Account</RouterLink>
+        <button v-if="auth.isLoggedIn" @click="logout; open=false" class="btn w-full" style="border:1px solid #fca5a5;color:#dc2626;background:none">Sign Out</button>
       </div>
     </div>
   </header>
