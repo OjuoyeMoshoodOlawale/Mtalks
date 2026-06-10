@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import {
   LayoutDashboard, BookOpen, Calendar, Users, CreditCard,
-  BarChart3, UserCheck, Star, HelpCircle, Settings, Bug, X, LogOut, MessageSquare
+  BarChart3, UserCheck, Star, HelpCircle, Settings, Bug, X, LogOut, MessageSquare, Sparkles, Image
 } from 'lucide-vue-next'
 
 const props = defineProps({ open: Boolean })
@@ -34,9 +34,11 @@ const nav = [
   { to: '/admin/analytics',     icon: BarChart3,        label: 'Analytics' },
   { to: '/admin/team',          icon: UserCheck,        label: 'Team' },
   { to: '/admin/testimonials',  icon: Star,             label: 'Testimonials' },
+  { to: '/admin/gallery',       icon: Image,      label: 'Gallery' },
   { to: '/admin/faqs',          icon: HelpCircle,       label: 'FAQs' },
   { to: '/admin/settings',      icon: Settings,   label: 'Settings' },
   { to: '/admin/messages',      icon: MessageSquare, label: 'Messages', badge: true },
+  { to: '/admin/muzzamil',      icon: Sparkles,   label: 'Muzzamil Bot' },
   { to: '/admin/logs',          icon: Bug,        label: 'Error Logs' },
 ]
 

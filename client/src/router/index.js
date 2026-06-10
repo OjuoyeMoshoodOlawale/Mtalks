@@ -18,6 +18,7 @@ const routes = [
   { path: '/terms',        name: 'Terms',         component: () => import('@/views/public/LegalView.vue'), props: { page: 'terms' } },
 
   { path: '/certificate/:code', name: 'Certificate', component: () => import('@/views/public/CertificateView.vue') },
+  { path: '/gallery',           name: 'Gallery',     component: () => import('@/views/public/GalleryView.vue') },
 
   /* ─ Auth ─ */
   { path: '/login',        name: 'Login',         component: () => import('@/views/auth/LoginView.vue'),   meta: { guestOnly: true } },
@@ -47,6 +48,8 @@ const routes = [
   { path: '/admin/settings',         name: 'AdminSettings',component: () => import('@/views/admin/SettingsView.vue'),         meta: { requiresAdmin: true } },
   { path: '/admin/logs',             name: 'AdminLogs',    component: () => import('@/views/admin/ErrorLogsView.vue'),        meta: { requiresAdmin: true } },
   { path: '/admin/messages',         name: 'AdminMessages',component: () => import('@/views/admin/MessagesView.vue'),          meta: { requiresAdmin: true } },
+  { path: '/admin/muzzamil',         name: 'AdminBot',     component: () => import('@/views/admin/BotKnowledgeView.vue'),      meta: { requiresAdmin: true } },
+  { path: '/admin/gallery',          name: 'AdminGallery', component: () => import('@/views/admin/GalleryManagement.vue'),     meta: { requiresAdmin: true } },
 
   /* ─ 404 ─ */
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/public/NotFoundView.vue') }

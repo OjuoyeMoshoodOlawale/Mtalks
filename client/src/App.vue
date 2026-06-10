@@ -7,9 +7,17 @@ import BaseToast from '@/components/common/BaseToast.vue'
 import BaseLoader from '@/components/common/BaseLoader.vue'
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-vue-next'
 import api from '@/services/api'
+import MuzzamilBot from '@/components/common/MuzzamilBot.vue'
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
 
 const auth = useAuthStore()
 const ui   = useUiStore()
+const route = useRoute()
+
+// Hide Muzzamil on admin pages and in the course player
+const showBot = computed(() =>
+  !route.path.startsWith('/admin') && !route.path.includes('/learn'))
 
 onMounted(async () => {
   if (auth.accessToken) await auth.fetchMe()
@@ -44,6 +52,9 @@ const iconFor = (type) => ({
       <component :is="Component" />
     </Transition>
   </RouterView>
+
+  <!-- Muzzamil assistant -->
+  <MuzzamilBot v-if="showBot" />
 
   <!-- Toast notifications -->
   <div class="toast-stack">

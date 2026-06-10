@@ -56,6 +56,8 @@ app.use('/api/logs',           require('./routes/logs.routes'));
 app.use('/api/contacts',       require('./routes/contacts.routes'));
 app.use('/api/evaluations',    require('./routes/evaluations.routes'));
 app.use('/api/certificates',   require('./routes/certificates.routes'));
+app.use('/api/bot',            require('./routes/bot.routes'));
+app.use('/api/gallery',        require('./routes/gallery.routes'));
 
 /* ── Health check ── */
 app.get('/api/health', (req, res) => {

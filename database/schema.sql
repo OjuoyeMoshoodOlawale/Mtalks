@@ -55,6 +55,7 @@ CREATE TABLE lessons (
   module_id      INT UNSIGNED NOT NULL,
   title          VARCHAR(200) NOT NULL,
   drive_file_id  VARCHAR(100),
+  video_type     ENUM('drive','youtube') DEFAULT 'drive',
   content        LONGTEXT,
   duration_min   SMALLINT    DEFAULT 0,
   sort_order     SMALLINT    DEFAULT 0,
@@ -248,4 +249,44 @@ CREATE TABLE certificates (
   UNIQUE KEY unique_cert (user_id, course_id),
   FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
+CREATE TABLE bot_knowledge (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  topic      VARCHAR(150) NOT NULL,
+  keywords   VARCHAR(500) NOT NULL,    -- comma-separated trigger words
+  answer     TEXT         NOT NULL,
+  is_active  TINYINT(1)   DEFAULT 1,
+  created_at DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_active (is_active)
+);
+
+-- Muzzamil starter knowledge
+INSERT INTO bot_knowledge (topic, keywords, answer) VALUES
+('Greeting', 'hello,hi,salam,assalamu,hey,good morning,good afternoon,good evening',
+ 'Wa alaikum salam! 🌿 I''m Muzzamil, your Muhsinah Academy assistant. I can help you with courses, events, consultations, payments, and more. What would you like to know?'),
+('Courses', 'course,courses,learn,lesson,class,study,enrol,enroll',
+ 'We offer self-paced online courses on marriage, relationships, and personal growth — some free, some paid. Browse them at the Courses page. Once enrolled, you get lifetime access and learn at your own pace!'),
+('Events', 'event,events,summit,retreat,workshop,ticket,seminar',
+ 'We host live events like the Muhsinah Marriage Summit and Couples'' Retreats. Check the Events page for upcoming dates, packages, and early-bird prices. Your QR ticket is emailed instantly after payment.'),
+('Consultation', 'consult,consultation,session,booking,book,appointment,coach,one on one,private',
+ 'You can book a private, confidential session with Coach Madinah Sanni from the Consultation page. Sessions are 60 minutes via video call. Both individual and couples sessions are available.'),
+('Payment', 'pay,payment,paystack,card,transfer,price,cost,fee,naira,refund',
+ 'We accept all Nigerian cards and bank transfers via Paystack — fully secure. Paid courses come with a 7-day satisfaction guarantee. Event tickets are non-refundable but transferable up to 48 hours before the event.'),
+('Certificates', 'certificate,cert,completion,award',
+ 'Complete 100% of a course''s lessons and you can claim a verified certificate of completion! Each certificate has a unique code anyone can verify on our website.'),
+('Contact', 'contact,email,phone,whatsapp,reach,support,help,talk to human,human',
+ 'You can reach our team via the Contact page, or send a WhatsApp message using the button there. For private matters, email us and we''ll respond within 24 hours insha''Allah.'),
+('About', 'about,who,madinah,sanni,founder,academy,muhsinah',
+ 'Muhsinah Academy was founded by Coach Madinah Sanni, a certified life and marriage coach with over 10 years of experience helping Muslim sisters and couples build stronger relationships. Learn more on our About page!');
+
+CREATE TABLE gallery_images (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title         VARCHAR(200),
+  drive_file_id VARCHAR(100) NOT NULL,    -- Google Drive image file ID
+  category      VARCHAR(100) DEFAULT 'General',
+  sort_order    INT DEFAULT 0,
+  is_published  TINYINT(1) DEFAULT 1,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_published (is_published, sort_order)
 );

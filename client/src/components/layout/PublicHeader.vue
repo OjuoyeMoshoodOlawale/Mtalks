@@ -15,6 +15,7 @@ const links = [
   { to: '/services',   label: 'Services' },
   { to: '/courses',    label: 'Courses' },
   { to: '/events',     label: 'Events' },
+  { to: '/gallery',    label: 'Gallery' },
   { to: '/team',       label: 'Team' },
   { to: '/contact',    label: 'Contact' },
 ]

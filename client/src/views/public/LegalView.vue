@@ -6,7 +6,7 @@ import { useSeoMeta } from '@/composables/useSeoMeta'
 
 useSeoMeta({
   title:       'Privacy Policy & Terms',
-  description: 'Read the Muhsinah Academy privacy policy and terms of service. We are fully compliant with Nigeria's NDPR data protection regulations.',
+  description: "Read the Muhsinah Academy privacy policy and terms of service. We are fully compliant with Nigeria's NDPR data protection regulations.",
   url:         '/legal',
 })
 

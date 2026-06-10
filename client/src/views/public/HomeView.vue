@@ -6,6 +6,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import HeroCanvas   from '@/components/public/HeroCanvas.vue'
+import api from '@/services/api'
 import {
   Heart, BookOpen, Calendar, Users, Award, ShieldCheck, Star, ChevronRight,
   Mic2, MessageCircle, Phone
@@ -42,22 +43,41 @@ const whyUs = [
   { icon: Star,        title: 'Practical Solutions',      desc: 'Actionable tools and strategies you can implement immediately.' },
 ]
 
-const testimonials = [
-  { name: 'Fatimah A.', quote: 'We gained a much better understanding of each other and our communication has improved significantly.', stars: 5 },
-  { name: 'Ameerah O.', quote: 'Our relationship was transformed through the guidance and practical tools we received. Alhamdulillah.', stars: 5 },
-  { name: 'Zainab M.', quote: 'The coaching sessions gave us clarity, confidence, and a renewed sense of purpose in our marriage.', stars: 5 },
-]
+/* Dynamic data — loaded from API (admin-managed) */
+const testimonials = ref([])
+const faqItems     = ref([])
 
-const faqItems = [
-  { q: 'Are sessions available online?', a: 'Yes, we offer both in-person sessions in Abuja and online coaching via video call.' },
-  { q: 'Is coaching confidential?',      a: 'Absolutely. Every session is held in complete confidence. Your privacy is our priority.' },
-  { q: 'How many sessions will I need?', a: 'Needs vary by individual or couple. We typically recommend starting with a discovery session.' },
-  { q: 'Can I access courses anytime?',  a: 'Yes — once you enrol in a course, you have lifetime access to all lessons and materials.' },
-]
+const loadDynamic = async () => {
+  try {
+    const [tRes, fRes] = await Promise.all([
+      api.get('/testimonials').catch(() => null),
+      api.get('/faqs').catch(() => null),
+    ])
+    const t = tRes?.data?.data || []
+    testimonials.value = t.slice(0, 3).map(x => ({
+      name: x.client_name, quote: x.content, stars: x.rating || 5
+    }))
+    const f = fRes?.data?.data || []
+    faqItems.value = f.slice(0, 5).map(x => ({ q: x.question, a: x.answer }))
+  } catch { /* keep fallbacks */ }
+  // Fallbacks if API returns nothing
+  if (!testimonials.value.length) testimonials.value = [
+    { name: 'Fatimah A.', quote: 'We gained a much better understanding of each other and our communication has improved significantly.', stars: 5 },
+    { name: 'Ameerah O.', quote: 'Our relationship was transformed through the guidance and practical tools we received. Alhamdulillah.', stars: 5 },
+    { name: 'Zainab M.', quote: 'The coaching sessions gave us clarity, confidence, and a renewed sense of purpose in our marriage.', stars: 5 },
+  ]
+  if (!faqItems.value.length) faqItems.value = [
+    { q: 'Are sessions available online?', a: 'Yes, we offer both in-person sessions in Abuja and online coaching via video call.' },
+    { q: 'Is coaching confidential?',      a: 'Absolutely. Every session is held in complete confidence. Your privacy is our priority.' },
+    { q: 'How many sessions will I need?', a: 'Needs vary by individual or couple. We typically recommend starting with a discovery session.' },
+    { q: 'Can I access courses anytime?',  a: 'Yes — once you enrol in a course, you have lifetime access to all lessons and materials.' },
+  ]
+}
 
 const openFaq = ref(null)
 
 onMounted(() => {
+  loadDynamic()
   gsap.from('.hero-text > *', {
     y: 40, opacity: 0, duration: 1, stagger: .15, ease: 'power3.out', delay: .5
   })

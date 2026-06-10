@@ -6,7 +6,7 @@ import { useUiStore }   from '@/stores/ui'
 import api from '@/services/api'
 import BaseLoader  from '@/components/common/BaseLoader.vue'
 import BaseButton  from '@/components/common/BaseButton.vue'
-import { CheckCircle, Circle, ChevronLeft, ChevronRight, BookOpen, Award, HelpCircle, XCircle, X } from 'lucide-vue-next'
+import { CheckCircle, Circle, ChevronLeft, ChevronRight, BookOpen, Award, HelpCircle, XCircle, X, Lock } from 'lucide-vue-next'
 
 const route   = useRoute()
 const auth    = useAuthStore()
@@ -28,7 +28,6 @@ const totalDone  = computed(() => flatLessons.value.filter(l => isDone(l.id)).le
 const totalLessons = computed(() => flatLessons.value.length)
 const pct = computed(() => totalLessons.value > 0 ? Math.round((totalDone.value / totalLessons.value) * 100) : 0)
 
-const driveUrl   = (id) => `https://drive.google.com/file/d/${id}/preview`
 
 onMounted(async () => {
   const [c, p] = await Promise.all([
@@ -45,10 +44,30 @@ onMounted(async () => {
   }
   progress.value = p.data.data || []
   current.value = flatLessons.value[0] || null
+  if (current.value) loadVideo(current.value)
   loading.value = false
 })
 
-const select = (lesson) => { current.value = lesson }
+const videoUrl   = ref(null)
+const videoError = ref('')
+const videoLoading = ref(false)
+
+const loadVideo = async (lesson) => {
+  videoUrl.value = null
+  videoError.value = ''
+  if (!lesson) return
+  videoLoading.value = true
+  try {
+    const { data } = await api.get(`/lessons/${lesson.id}/video`)
+    videoUrl.value = data.data?.embed_url || null
+  } catch (e) {
+    videoError.value = e.response?.data?.message || 'Could not load this video'
+  } finally {
+    videoLoading.value = false
+  }
+}
+
+const select = (lesson) => { current.value = lesson; loadVideo(lesson) }
 
 const markDone = async () => {
   if (!current.value || isDone(current.value.id)) return
@@ -59,11 +78,11 @@ const markDone = async () => {
 
 const next = () => {
   const idx = currentIdx.value
-  if (idx < flatLessons.value.length - 1) current.value = flatLessons.value[idx + 1]
+  if (idx < flatLessons.value.length - 1) select(flatLessons.value[idx + 1])
 }
 const prev = () => {
   const idx = currentIdx.value
-  if (idx > 0) current.value = flatLessons.value[idx - 1]
+  if (idx > 0) select(flatLessons.value[idx - 1])
 }
 
 /* ── Module quiz ── */
@@ -164,15 +183,33 @@ const claimCertificate = async () => {
       <!-- Main player -->
       <main class="player-main">
         <div v-if="current" class="video-area">
-          <iframe v-if="current.drive_file_id"
-            :src="driveUrl(current.drive_file_id)"
-            class="drive-frame"
-            allow="autoplay"
-            allowfullscreen
-          />
+          <!-- Loading video access -->
+          <div v-if="videoLoading" class="video-placeholder">
+            <BaseLoader />
+            <p>Verifying access…</p>
+          </div>
+
+          <!-- Access denied / error -->
+          <div v-else-if="videoError" class="video-placeholder">
+            <Lock :size="40" color="var(--ma-gold)" />
+            <p>{{ videoError }}</p>
+          </div>
+
+          <!-- Protected player -->
+          <div v-else-if="videoUrl" class="video-shield" @contextmenu.prevent>
+            <iframe
+              :src="videoUrl"
+              class="drive-frame"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowfullscreen
+              referrerpolicy="no-referrer"
+              sandbox="allow-scripts allow-same-origin allow-presentation"
+            />
+          </div>
+
           <div v-else class="video-placeholder">
             <BookOpen :size="48" color="rgba(255,255,255,.3)" />
-            <p>Video will appear here once uploaded to Google Drive</p>
+            <p>Video will appear here once the instructor uploads it</p>
           </div>
 
           <div class="player-controls">
@@ -324,6 +361,8 @@ const claimCertificate = async () => {
 .lesson-notes{font-size:.875rem;color:rgba(255,255,255,.65);line-height:1.7;white-space:pre-line}
 .ctrl-btns{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .completion-card{max-width:500px;margin:32px auto;background:rgba(240,193,48,.08);border:2px solid var(--ma-gold);border-radius:var(--radius-xl);padding:36px;text-align:center}
+.video-shield{position:relative;width:100%;height:100%}
+.video-shield::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;z-index:2}/* covers Drive pop-out button */
 .completion-card h3{font-family:var(--font-heading);color:var(--ma-gold);margin:16px 0 8px}
 .completion-card p{color:rgba(255,255,255,.7)}
 /* Quiz button in sidebar */

@@ -21,7 +21,7 @@ const saving = ref(false)
 
 /* Modal state */
 const modModal = ref(false); const modForm = ref({ title:'', description:'' }); const modEdit = ref(null)
-const lesModal = ref(false); const lesForm = ref({ title:'', drive_file_id:'', content:'', duration_min:0 }); const lesEdit = ref(null); const lesModId = ref(null)
+const lesModal = ref(false); const lesForm = ref({ title:'', drive_file_id:'', video_type:'drive', content:'', duration_min:0 }); const lesEdit = ref(null); const lesModId = ref(null)
 const delTarget= ref(null); const delType = ref(null); const showDel = ref(false); const deleting = ref(false)
 const openMod  = ref(null)
 
@@ -52,8 +52,8 @@ const saveModule = async () => {
 }
 
 /* Lesson */
-const openLesCreate = (modId) => { lesModId.value=modId; lesEdit.value=null; lesForm.value={title:'',drive_file_id:'',content:'',duration_min:0}; lesModal.value=true }
-const openLesEdit   = (l, modId) => { lesModId.value=modId; lesEdit.value=l; lesForm.value={title:l.title,drive_file_id:l.drive_file_id||'',content:l.content||'',duration_min:l.duration_min||0}; lesModal.value=true }
+const openLesCreate = (modId) => { lesModId.value=modId; lesEdit.value=null; lesForm.value={title:'',drive_file_id:'',video_type:'drive',content:'',duration_min:0}; lesModal.value=true }
+const openLesEdit   = (l, modId) => { lesModId.value=modId; lesEdit.value=l; lesForm.value={title:l.title,drive_file_id:l.drive_file_id||'',video_type:l.video_type||'drive',content:l.content||'',duration_min:l.duration_min||0}; lesModal.value=true }
 const saveLesson = async () => {
   if (!lesForm.value.title) { ui.toastError('Title required'); return }
   saving.value=true
@@ -74,9 +74,32 @@ const confirmDelete = async () => {
   } finally { deleting.value=false }
 }
 
-const extractDriveId = (input) => {
-  const m = input.match(/\/d\/([a-zA-Z0-9_-]+)/)
-  if (m) { lesForm.value.drive_file_id = m[1]; ui.toast('Drive ID extracted') }
+const extractVideoId = (input) => {
+  if (!input) return
+  // Google Drive: /d/{id}/ or ?id={id}
+  let m = input.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || input.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+  if (m) {
+    lesForm.value.drive_file_id = m[1]
+    lesForm.value.video_type = 'drive'
+    ui.toast('Google Drive video ID extracted')
+    return
+  }
+  // YouTube: watch?v=, youtu.be/, shorts/, embed/, live/
+  m = input.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (m) {
+    lesForm.value.drive_file_id = m[1]
+    lesForm.value.video_type = 'youtube'
+    ui.toast('YouTube video ID extracted')
+    return
+  }
+  // Bare 11-char YouTube ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input.trim())) {
+    lesForm.value.drive_file_id = input.trim()
+    lesForm.value.video_type = 'youtube'
+    ui.toast('Treated as YouTube video ID')
+    return
+  }
+  ui.toastError('Could not recognise a Drive or YouTube link')
 }
 
 /* ── Quiz builder ── */
@@ -194,7 +217,7 @@ const saveQuiz = async () => {
                     <div>
                       <p style="font-weight:500;margin:0;font-size:.875rem">{{ lesson.title }}</p>
                       <p style="font-size:.75rem;color:var(--ma-text-muted);margin:0">
-                        {{ lesson.drive_file_id ? 'Drive video attached' : 'No video yet' }}
+                        {{ lesson.drive_file_id ? (lesson.video_type === 'youtube' ? 'YouTube video attached' : 'Drive video attached') : 'No video yet' }}
                         {{ lesson.duration_min ? ' · '+lesson.duration_min+' min' : '' }}
                       </p>
                     </div>
@@ -234,16 +257,29 @@ const saveQuiz = async () => {
     <BaseInput v-model="lesForm.title" label="Lesson title" placeholder="e.g. The 5 Love Languages" required/>
 
     <div class="form-group">
-      <label class="form-label">Google Drive Video</label>
+      <label class="form-label">Lesson Video <span style="font-weight:400;color:var(--ma-text-muted)">(Google Drive or YouTube)</span></label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <label class="vt-pill" :class="{active: lesForm.video_type==='drive'}">
+          <input type="radio" value="drive" v-model="lesForm.video_type" style="display:none"/> Google Drive
+        </label>
+        <label class="vt-pill" :class="{active: lesForm.video_type==='youtube'}">
+          <input type="radio" value="youtube" v-model="lesForm.video_type" style="display:none"/> YouTube
+        </label>
+      </div>
       <div style="display:flex;gap:8px">
-        <input v-model="lesForm.drive_file_id" class="form-input" placeholder="Paste Drive File ID or full share URL"/>
-        <BaseButton variant="outline" size="sm" @click="extractDriveId(lesForm.drive_file_id)" style="white-space:nowrap">Extract ID</BaseButton>
+        <input v-model="lesForm.drive_file_id" class="form-input" placeholder="Paste a Drive share link, YouTube link, or raw video ID"/>
+        <BaseButton variant="outline" size="sm" @click="extractVideoId(lesForm.drive_file_id)" style="white-space:nowrap">Extract ID</BaseButton>
       </div>
       <p style="font-size:.78rem;color:var(--ma-text-muted);margin-top:4px">
-        From Google Drive share URL, copy the long ID after /d/ — e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs
+        Drive: set the file to "Anyone with link → Viewer" and turn OFF download in share settings.
+        YouTube: upload as <strong>Unlisted</strong> (not Public, not Private). The link is never exposed to non-enrolled visitors.
       </p>
-      <div v-if="lesForm.drive_file_id" style="margin-top:8px;border-radius:8px;overflow:hidden;aspect-ratio:16/9">
-        <iframe :src="`https://drive.google.com/file/d/${lesForm.drive_file_id}/preview`" style="width:100%;height:100%;border:none" allowfullscreen/>
+      <div v-if="lesForm.drive_file_id && !lesForm.drive_file_id.includes('/')" style="margin-top:8px;border-radius:8px;overflow:hidden;aspect-ratio:16/9">
+        <iframe
+          :src="lesForm.video_type==='youtube'
+            ? `https://www.youtube-nocookie.com/embed/${lesForm.drive_file_id}`
+            : `https://drive.google.com/file/d/${lesForm.drive_file_id}/preview`"
+          style="width:100%;height:100%;border:none" allowfullscreen/>
       </div>
     </div>
 
@@ -343,6 +379,8 @@ const saveQuiz = async () => {
 .action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;font-size:.78rem;background:var(--ma-white);color:var(--ma-text);border:1px solid var(--ma-border);cursor:pointer;transition:all var(--trans-fast)}
 .action-btn:hover{background:var(--ma-green-tint);color:var(--ma-green-deep);border-color:var(--ma-green)}
 .action-btn.danger:hover{background:#fce8e8;color:#D32F2F;border-color:#D32F2F}
+.vt-pill{padding:5px 16px;border-radius:16px;border:1px solid var(--ma-border);font-size:.8rem;cursor:pointer;color:var(--ma-text-muted);transition:all .15s}
+.vt-pill.active{background:var(--ma-green);color:#fff;border-color:var(--ma-green);font-weight:600}
 /* Quiz builder */
 .quiz-q-card{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:16px;margin-bottom:14px}
 .quiz-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}

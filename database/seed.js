@@ -53,6 +53,14 @@ async function seed() {
     TRUNCATE faqs;
     TRUNCATE otp_tokens;
     TRUNCATE users;
+    CREATE TABLE IF NOT EXISTS contacts (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(150) NOT NULL, subject VARCHAR(200) NOT NULL, message TEXT NOT NULL, is_read TINYINT(1) DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS certificates (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT UNSIGNED NOT NULL, course_id INT UNSIGNED NOT NULL, cert_code VARCHAR(20) NOT NULL UNIQUE, issued_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_cert (user_id, course_id));
+    CREATE TABLE IF NOT EXISTS gallery_images (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, title VARCHAR(200), drive_file_id VARCHAR(100) NOT NULL, category VARCHAR(100) DEFAULT 'General', sort_order INT DEFAULT 0, is_published TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+    TRUNCATE gallery_images;
+    CREATE TABLE IF NOT EXISTS bot_knowledge (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, topic VARCHAR(150) NOT NULL, keywords VARCHAR(500) NOT NULL, answer TEXT NOT NULL, is_active TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+    TRUNCATE contacts;
+    TRUNCATE certificates;
+    TRUNCATE bot_knowledge;
     SET FOREIGN_KEY_CHECKS = 1;
   `);
   console.log('🗑️   Tables cleared');
@@ -463,6 +471,28 @@ async function seed() {
     (2, 3, DATE_SUB(NOW(), INTERVAL 7 DAY));
   `);
   console.log('📊  Lesson progress seeded');
+
+  /* ── 15. MUZZAMIL BOT KNOWLEDGE ───────────────────────────── */
+  await c.query(`
+    INSERT INTO bot_knowledge (topic, keywords, answer) VALUES
+    ('Greeting', 'hello,hi,salam,assalamu,hey,good morning,good afternoon,good evening',
+     'Wa alaikum salam! 🌿 I''m Muzzamil, your Muhsinah Academy assistant. I can help you with courses, events, consultations, payments, and more. What would you like to know?'),
+    ('Courses', 'course,courses,learn,lesson,class,study,enrol,enroll',
+     'We offer self-paced online courses on marriage, relationships, and personal growth — some free, some paid. Browse them at the Courses page. Once enrolled, you get lifetime access!'),
+    ('Events', 'event,events,summit,retreat,workshop,ticket,seminar',
+     'We host live events like the Muhsinah Marriage Summit and Couples'' Retreats. Check the Events page for dates, packages, and early-bird prices. Your QR ticket is emailed instantly after payment.'),
+    ('Consultation', 'consult,consultation,session,booking,book,appointment,coach,one on one,private',
+     'You can book a private, confidential session with Coach Madinah Sanni from the Consultation page. Sessions are 60 minutes via video call — individual and couples options available.'),
+    ('Payment', 'pay,payment,paystack,card,transfer,price,cost,fee,naira,refund',
+     'We accept all Nigerian cards and bank transfers via Paystack — fully secure. Paid courses come with a 7-day satisfaction guarantee. Event tickets are transferable up to 48 hours before the event.'),
+    ('Certificates', 'certificate,cert,completion,award',
+     'Complete 100% of a course''s lessons and you can claim a verified certificate! Each one has a unique code anyone can verify on our website.'),
+    ('Contact', 'contact,email,phone,whatsapp,reach,support,help,talk to human,human',
+     'You can reach our team via the Contact page or WhatsApp. For private matters, email us and we''ll respond within 24 hours insha''Allah.'),
+    ('About', 'about,who,madinah,sanni,founder,academy,muhsinah',
+     'Muhsinah Academy was founded by Coach Madinah Sanni, a certified life and marriage coach with over 10 years of experience. Learn more on our About page!');
+  `);
+  console.log('🤖  Muzzamil knowledge seeded (8)');
 
   await c.end();
 

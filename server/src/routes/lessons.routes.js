@@ -4,6 +4,7 @@ const { verifyToken, requireAdmin } = require('../middleware/auth');
 
 router.get('/',              verifyToken, ctrl.getAll);
 router.get('/progress',      verifyToken, ctrl.getProgress);
+router.get('/:id/video',     verifyToken, ctrl.getVideo);
 router.get('/:id',           verifyToken, ctrl.getOne);
 router.post('/',             verifyToken, requireAdmin, ctrl.create);
 router.put('/reorder',       verifyToken, requireAdmin, ctrl.reorder);
