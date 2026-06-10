@@ -35,7 +35,8 @@ const avgProgress = computed(() => {
 </script>
 
 <template>
-  <PublicHeader />
+<div class="page-root">
+<PublicHeader />
   <div class="dashboard-wrap">
     <div class="container">
       <!-- Greeting -->
@@ -117,6 +118,7 @@ const avgProgress = computed(() => {
     </div>
   </div>
   <PublicFooter />
+</div>
 </template>
 
 <style scoped>
