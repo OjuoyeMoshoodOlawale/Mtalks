@@ -22,15 +22,16 @@ exports.getAll = async (req, res) => {
       [limit, offset]
     );
 
-    const parsed = events.map(ev => ({
-      ...ev,
-      packages: ev.packages_raw
-        ? JSON.parse(`[${ev.packages_raw}]`)
-        : []
-    }));
-    delete parsed.forEach(e => delete e.packages_raw);
+    const parsed = events.map(ev => {
+      const out = {
+        ...ev,
+        packages: ev.packages_raw ? JSON.parse(`[${ev.packages_raw}]`) : []
+      };
+      delete out.packages_raw;
+      return out;
+    });
 
-    const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM events ${where}`);
+    const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM events e ${where}`);
     return ok(res, parsed, { pagination: { page, perPage, total } });
   } catch (err) {
     logger.error('events.getAll', { error: err.message });

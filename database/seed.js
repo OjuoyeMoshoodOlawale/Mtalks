@@ -462,6 +462,14 @@ async function seed() {
   `);
   console.log('💳  Payments seeded (4)');
 
+  /* ── 13b. DEMO EVENT REGISTRATIONS (tickets) ─────────────── */
+  await c.query(`
+    INSERT INTO event_registrations (user_id, event_id, package_id, ticket_code, registered_at) VALUES
+    (2, 1, 1, 'DEMOTICKETAISHA1', DATE_SUB(NOW(), INTERVAL 7 DAY)),
+    (3, 1, 2, 'DEMOTICKETFATIM1', DATE_SUB(NOW(), INTERVAL 12 DAY));
+  `);
+  console.log('🎫  Event registrations seeded (2)');
+
   /* ── 14. DEMO LESSON PROGRESS ─────────────────────────────── */
   // Aisha has finished 3 lessons of course 1
   await c.query(`

@@ -13,8 +13,21 @@ const COOKIE_OPTS = {
 };
 
 /* ── Register ── */
+const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 exports.register = async (req, res) => {
   const { name, email, password } = req.body;
+
+  /* Input validation */
+  if (!name || !name.trim() || name.trim().length < 2)
+    return badReq(res, 'Please enter your full name');
+  if (!email || !EMAIL_RX.test(email.trim()))
+    return badReq(res, 'Please enter a valid email address');
+  if (!password || password.length < 8)
+    return badReq(res, 'Password must be at least 8 characters');
+  if (name.trim().length > 100 || email.trim().length > 150)
+    return badReq(res, 'Input too long');
+
   try {
     const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length) return conflict(res, 'An account with this email already exists');

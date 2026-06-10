@@ -9,15 +9,16 @@ import { CheckCircle, XCircle, AlertTriangle } from 'lucide-vue-next'
 import api from '@/services/api'
 import MuzzamilBot from '@/components/common/MuzzamilBot.vue'
 import { useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const auth = useAuthStore()
 const ui   = useUiStore()
 const route = useRoute()
+const crispActive = ref(false)
 
-// Hide Muzzamil on admin pages and in the course player
+// Hide Muzzamil on admin pages, in the course player, or when Crisp is configured
 const showBot = computed(() =>
-  !route.path.startsWith('/admin') && !route.path.includes('/learn'))
+  !crispActive.value && !route.path.startsWith('/admin') && !route.path.includes('/learn'))
 
 onMounted(async () => {
   if (auth.accessToken) await auth.fetchMe()
@@ -29,6 +30,7 @@ onMounted(async () => {
     const settings = Object.fromEntries(raw.map(s => [s.key, s.value]))
     const crispId = settings.crisp_website_id
     if (crispId && crispId.trim()) {
+      crispActive.value = true
       window.$crisp = []
       window.CRISP_WEBSITE_ID = crispId.trim()
       const s = document.createElement('script')

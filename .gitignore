@@ -35,3 +35,11 @@ yarn-debug.log*
 
 # OS
 Thumbs.db
+
+# Server env (explicit)
+server/.env
+client/.env.local
+client/.env.production.local
+
+# Test/QA artifacts
+*.tmp

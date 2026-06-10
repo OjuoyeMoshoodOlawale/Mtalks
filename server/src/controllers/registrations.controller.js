@@ -33,7 +33,7 @@ exports.checkIn = async (req, res) => {
 exports.getMine = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT er.id, er.ticket_code, er.qr_data, er.attended_at, er.registered_at,
+      `SELECT er.id, er.ticket_code, er.attended_at, er.registered_at,
          ev.title, ev.banner, ev.type, ev.venue, ev.meeting_link, ev.event_date,
          ep.name AS package_name, ep.price
        FROM event_registrations er
@@ -41,6 +41,14 @@ exports.getMine = async (req, res) => {
        JOIN event_packages ep ON ep.id = er.package_id
        WHERE er.user_id = ? ORDER BY er.registered_at DESC`,
       [req.user.id]);
+
+    // Generate QR codes on demand (not stored — always derived from ticket_code)
+    const { generateQrDataUrl } = require('../services/ticket.service');
+    for (const r of rows) {
+      try { r.qr_data = await generateQrDataUrl(r.ticket_code); }
+      catch { r.qr_data = null; }
+    }
+
     return ok(res, rows);
   } catch (err) { return serverErr(res); }
 };
