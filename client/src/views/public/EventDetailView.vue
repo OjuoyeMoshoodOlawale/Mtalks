@@ -87,8 +87,8 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
       amount:   chargeKobo,   // grossed up so merchant receives exact listed price
       ref:      reference,
       currency: 'NGN',
-      callback: onSuccess,
-      onClose:  onCancel
+      callback: (response) => { onSuccess(response) },   // sync wrapper — Paystack rejects async functions
+      onClose:  () => { onCancel() }
     })
     console.log('[PAY] handler:', handler, 'openIframe fn:', typeof handler?.openIframe)
     handler.openIframe()
