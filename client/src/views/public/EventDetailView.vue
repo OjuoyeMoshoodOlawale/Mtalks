@@ -9,7 +9,7 @@ import PublicFooter from '@/components/layout/PublicFooter.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
 import BaseButton   from '@/components/common/BaseButton.vue'
 import BaseModal    from '@/components/common/BaseModal.vue'
-import { Calendar, MapPin, Monitor, Clock, Users, Tag, CheckCircle, Timer } from 'lucide-vue-next'
+import { Calendar, MapPin, Monitor, Clock, Users, Tag, CheckCircle, Timer, Lock, CalendarOff } from 'lucide-vue-next'
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
 const route   = useRoute()
@@ -114,15 +114,11 @@ const pay = async () => {
     return
   }
 
-  /* Guest (not logged in) — show name/email form first */
+  /* Guest (not logged in) — name/email fields always visible, validate here */
   if (!auth.isLoggedIn) {
-    if (!guestName.value.trim() || !guestEmail.value.trim()) {
-      guestMode.value = true
-      ui.toast('Enter your name and email below, then click Pay again')
-      /* Scroll the guest form into view so it is not missed */
-      await nextTick()
-      guestFormRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
+    if (!guestName.value.trim()) { ui.toastError('Please enter your full name'); return }
+    if (!guestEmail.value.trim() || !guestEmail.value.includes('@')) {
+      ui.toastError('Please enter a valid email address'); return
     }
     await payAsGuest()
     return
@@ -220,61 +216,119 @@ const payAsGuest = async () => {
 
         <!-- Registration card -->
         <div class="register-card">
+
+          <!-- Already registered -->
           <template v-if="event.registered">
             <div style="text-align:center;padding:12px 0">
               <CheckCircle :size="40" color="var(--ma-green)" />
-              <p style="font-weight:700;color:var(--ma-green-dark);margin-top:10px">You're registered!</p>
+              <p style="font-weight:700;color:var(--ma-green-dark);margin-top:10px">You are registered!</p>
               <p style="font-size:.85rem;color:var(--ma-text-muted);margin-top:6px">Check your email for your ticket and WhatsApp group link.</p>
             </div>
           </template>
-          <template v-else>
-            <p style="font-weight:700;font-size:1.05rem;margin-bottom:16px;color:var(--ma-green-dark)">Select a Package</p>
 
-            <div v-if="!event.packages?.length" style="color:var(--ma-text-muted);font-size:.88rem">
+          <template v-else>
+
+            <!-- No packages yet -->
+            <div v-if="!event.packages?.length" style="color:var(--ma-text-muted);font-size:.88rem;padding:12px 0">
               No packages available yet.
             </div>
 
-            <div v-else>
-              <!-- Package selector (visible, no modal) -->
+            <div v-else class="reg-form">
+
+              <!-- ── Step 1: Choose package ── -->
+              <p class="reg-step-label">1. Choose a package</p>
               <div class="reg-pkg-list">
                 <label
                   v-for="pkg in event.packages" :key="pkg.id"
                   class="reg-pkg-option"
                   :class="{ selected: selPkg?.id === pkg.id }"
                 >
-                  <input type="radio" :value="pkg" v-model="selPkg" style="accent-color:var(--ma-green)" />
+                  <input type="radio" :value="pkg" v-model="selPkg" style="accent-color:var(--ma-green);margin-top:2px;flex-shrink:0" />
                   <div class="reg-pkg-info">
                     <p class="reg-pkg-name">{{ pkg.name }}</p>
                     <p class="reg-pkg-price">
                       ₦{{ Number(pkgPrice(pkg)).toLocaleString() }}
-                      <s v-if="isEarlyBird(pkg)" style="color:var(--ma-text-muted);font-size:.8rem;font-weight:400">
-                        ₦{{ Number(pkg.price).toLocaleString() }}
-                      </s>
+                      <s v-if="isEarlyBird(pkg)" class="reg-pkg-strike">₦{{ Number(pkg.price).toLocaleString() }}</s>
                     </p>
-                    <p v-if="isEarlyBird(pkg)" class="reg-pkg-early">Early-bird ends {{ new Date(pkg.early_bird_deadline).toLocaleDateString("en-NG",{day:"numeric",month:"short"}) }}</p>
+                    <p v-if="isEarlyBird(pkg)" class="reg-pkg-early">
+                      Early-bird ends {{ new Date(pkg.early_bird_deadline).toLocaleDateString('en-NG',{day:'numeric',month:'short'}) }}
+                    </p>
                     <p v-if="pkg.description" class="reg-pkg-desc">{{ pkg.description }}</p>
                   </div>
                 </label>
               </div>
 
+              <!-- ── Step 2: Your details ── -->
+              <template v-if="!auth.isLoggedIn">
+                <div class="reg-divider"/>
+                <p class="reg-step-label">2. Your details</p>
+                <div class="reg-fields">
+                  <div class="reg-field">
+                    <label class="reg-field-label">Full name <span class="reg-required">*</span></label>
+                    <input
+                      v-model="guestName"
+                      type="text"
+                      class="reg-input"
+                      placeholder="e.g. Fatima Abdullahi"
+                      autocomplete="name"
+                    />
+                  </div>
+                  <div class="reg-field">
+                    <label class="reg-field-label">Email address <span class="reg-required">*</span></label>
+                    <input
+                      v-model="guestEmail"
+                      type="email"
+                      class="reg-input"
+                      placeholder="your@email.com"
+                      autocomplete="email"
+                    />
+                    <p class="reg-field-hint">Your QR-coded ticket will be sent here</p>
+                  </div>
+                </div>
+                <p class="reg-signin-hint">
+                  Already have an account?
+                  <RouterLink :to="{ name: 'Login', query: { redirect: route.path + (selPkg ? '?pkg=' + selPkg.id : '') } }" style="color:var(--ma-green-deep);font-weight:600">Sign in</RouterLink>
+                  for faster checkout
+                </p>
+              </template>
+
+              <!-- Logged-in summary -->
+              <template v-else>
+                <div class="reg-divider"/>
+                <div class="reg-user-badge">
+                  <div class="reg-user-avatar">{{ auth.user?.name?.[0] }}</div>
+                  <div>
+                    <p style="font-weight:700;font-size:.88rem;color:var(--ma-green-dark)">{{ auth.user?.name }}</p>
+                    <p style="font-size:.78rem;color:var(--ma-text-muted)">{{ auth.user?.email }}</p>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ── Pay button ── -->
+              <div class="reg-divider"/>
               <BaseButton
                 @click="pay"
                 :loading="paying"
-                :disabled="!selPkg"
+                :disabled="!selPkg || (!auth.isLoggedIn && (!guestName.trim() || !guestEmail.trim()))"
                 class="w-full"
-                style="justify-content:center;margin-top:16px;font-size:1rem;padding:14px"
-                :style="!selPkg ? 'opacity:0.55;cursor:not-allowed' : ''"
+                style="justify-content:center;font-size:1rem;padding:14px"
               >
                 {{ selPkg ? 'Pay &#8358;' + Number(pkgPrice(selPkg)).toLocaleString() + ' Now' : 'Select a package above' }}
               </BaseButton>
-              <p style="font-size:.75rem;color:var(--ma-text-muted);margin-top:10px;text-align:center">
-                 Secured by Paystack · Your ticket is sent to your email
+
+              <p class="reg-secure-note">
+                <Lock :size="12"/> Secured by Paystack &middot; Ticket sent to your email instantly
               </p>
+
             </div>
+
+            <!-- Deadline -->
+            <div class="reg-deadline">
+              <CalendarOff :size="13"/>
+              Registration closes {{ new Date(event.deadline).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'}) }}
+            </div>
+
           </template>
-          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--ma-border);font-size:.82rem;color:var(--ma-text-muted)">
-            <p style="margin-bottom:6px"><strong>Registration deadline:</strong> {{ new Date(event.deadline).toLocaleDateString('en-NG',{day:'numeric',month:'long',year:'numeric'}) }}</p>
-          </div>
         </div>
       </div>
     </section>
@@ -300,11 +354,24 @@ const payAsGuest = async () => {
 .pkg-desc{font-size:.82rem;color:var(--ma-text-muted);margin-top:8px;line-height:1.5}
 .pkg-deadline{display:flex;align-items:center;gap:4px;font-size:.75rem;color:#7A5F00;margin-top:8px}
 .early-bird-badge{position:absolute;top:-10px;right:10px;background:var(--ma-gold);color:#000;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
-.guest-form{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px}
-.guest-form--active{border-color:var(--ma-gold);background:var(--ma-gold-tint);animation:pulse-border 1.5s ease-in-out 2}
-@keyframes pulse-border{0%,100%{border-color:var(--ma-gold)}50%{border-color:var(--ma-green-dark);box-shadow:0 0 0 3px rgba(212,160,23,.2)}}
-.guest-form-title{font-size:.82rem;font-weight:700;color:var(--ma-green-dark);margin-bottom:10px}
-.guest-hint{font-size:.72rem;color:var(--ma-text-muted);margin-top:4px}
+/* Register card internals */
+.reg-form{display:flex;flex-direction:column;gap:0}
+.reg-step-label{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ma-text-muted);margin-bottom:10px}
+.reg-divider{height:1px;background:var(--ma-border);margin:16px 0}
+.reg-fields{display:flex;flex-direction:column;gap:12px}
+.reg-field{display:flex;flex-direction:column;gap:5px}
+.reg-field-label{font-size:.83rem;font-weight:600;color:var(--ma-text)}
+.reg-required{color:#e53e3e}
+.reg-input{width:100%;padding:10px 12px;border:1.5px solid var(--ma-border);border-radius:var(--radius-md);font-size:.9rem;font-family:var(--font-body);color:var(--ma-text);background:var(--ma-white);transition:border-color .15s;box-sizing:border-box}
+.reg-input:focus{outline:none;border-color:var(--ma-green);box-shadow:0 0 0 3px var(--ma-green-tint)}
+.reg-input::placeholder{color:var(--ma-text-muted)}
+.reg-field-hint{font-size:.72rem;color:var(--ma-text-muted)}
+.reg-signin-hint{font-size:.78rem;color:var(--ma-text-muted);margin-top:10px}
+.reg-user-badge{display:flex;align-items:center;gap:10px;padding:10px;background:var(--ma-green-tint);border-radius:var(--radius-md)}
+.reg-user-avatar{width:34px;height:34px;border-radius:50%;background:var(--ma-green-deep);color:#fff;font-family:var(--font-heading);font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reg-secure-note{display:flex;align-items:center;justify-content:center;gap:5px;font-size:.72rem;color:var(--ma-text-muted);margin-top:8px}
+.reg-deadline{display:flex;align-items:center;gap:6px;margin-top:16px;padding-top:14px;border-top:1px solid var(--ma-border);font-size:.78rem;color:var(--ma-text-muted)}
+.reg-pkg-strike{color:var(--ma-text-muted);font-size:.8rem;font-weight:400;margin-left:6px}
 .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
 .reg-pkg-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid var(--ma-border);border-radius:var(--radius-md);cursor:pointer;transition:all .15s}
 .reg-pkg-option.selected{border-color:var(--ma-green);background:var(--ma-green-tint)}
@@ -317,11 +384,24 @@ const payAsGuest = async () => {
 .register-card{background:var(--ma-white);border:1px solid var(--ma-border);border-radius:var(--radius-lg);padding:28px;position:sticky;top:80px;box-shadow:var(--shadow-md)}
 .packages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 @media(max-width:960px){
-  .guest-form{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px}
-.guest-form--active{border-color:var(--ma-gold);background:var(--ma-gold-tint);animation:pulse-border 1.5s ease-in-out 2}
-@keyframes pulse-border{0%,100%{border-color:var(--ma-gold)}50%{border-color:var(--ma-green-dark);box-shadow:0 0 0 3px rgba(212,160,23,.2)}}
-.guest-form-title{font-size:.82rem;font-weight:700;color:var(--ma-green-dark);margin-bottom:10px}
-.guest-hint{font-size:.72rem;color:var(--ma-text-muted);margin-top:4px}
+  /* Register card internals */
+.reg-form{display:flex;flex-direction:column;gap:0}
+.reg-step-label{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ma-text-muted);margin-bottom:10px}
+.reg-divider{height:1px;background:var(--ma-border);margin:16px 0}
+.reg-fields{display:flex;flex-direction:column;gap:12px}
+.reg-field{display:flex;flex-direction:column;gap:5px}
+.reg-field-label{font-size:.83rem;font-weight:600;color:var(--ma-text)}
+.reg-required{color:#e53e3e}
+.reg-input{width:100%;padding:10px 12px;border:1.5px solid var(--ma-border);border-radius:var(--radius-md);font-size:.9rem;font-family:var(--font-body);color:var(--ma-text);background:var(--ma-white);transition:border-color .15s;box-sizing:border-box}
+.reg-input:focus{outline:none;border-color:var(--ma-green);box-shadow:0 0 0 3px var(--ma-green-tint)}
+.reg-input::placeholder{color:var(--ma-text-muted)}
+.reg-field-hint{font-size:.72rem;color:var(--ma-text-muted)}
+.reg-signin-hint{font-size:.78rem;color:var(--ma-text-muted);margin-top:10px}
+.reg-user-badge{display:flex;align-items:center;gap:10px;padding:10px;background:var(--ma-green-tint);border-radius:var(--radius-md)}
+.reg-user-avatar{width:34px;height:34px;border-radius:50%;background:var(--ma-green-deep);color:#fff;font-family:var(--font-heading);font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reg-secure-note{display:flex;align-items:center;justify-content:center;gap:5px;font-size:.72rem;color:var(--ma-text-muted);margin-top:8px}
+.reg-deadline{display:flex;align-items:center;gap:6px;margin-top:16px;padding-top:14px;border-top:1px solid var(--ma-border);font-size:.78rem;color:var(--ma-text-muted)}
+.reg-pkg-strike{color:var(--ma-text-muted);font-size:.8rem;font-weight:400;margin-left:6px}
 .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
 .reg-pkg-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:2px solid var(--ma-border);border-radius:var(--radius-md);cursor:pointer;transition:all .15s}
 .reg-pkg-option.selected{border-color:var(--ma-green);background:var(--ma-green-tint)}
