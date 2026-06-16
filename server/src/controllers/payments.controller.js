@@ -11,15 +11,6 @@ exports.initialize = async (req, res) => {
   const { type, item_id } = req.body;
   const userId = req.user.id;
 
-  /* Validate Paystack secret key is configured */
-  if (!process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY.includes('xxxx')) {
-    logger.error('payments.initialize', {
-      error: 'PAYSTACK_SECRET_KEY not configured in server/.env',
-      route: req.originalUrl, userId
-    });
-    return badReq(res, 'Payment is not configured. Please add PAYSTACK_SECRET_KEY to server/.env and restart.');
-  }
-
   try {
     const [[user]] = await db.query('SELECT id, name, email FROM users WHERE id = ?', [userId]);
 
@@ -89,9 +80,6 @@ exports.initializeGuestEvent = async (req, res) => {
   if (!guest_name?.trim())                   return badReq(res, 'Your full name is required');
   if (!guest_email || !/\S+@\S+\.\S+/.test(guest_email)) return badReq(res, 'A valid email address is required');
   if (!event_id || !package_id)              return badReq(res, 'Event and package are required');
-
-  const paystackConfigured = process.env.PAYSTACK_SECRET_KEY && !process.env.PAYSTACK_SECRET_KEY.includes('xxxx');
-  if (!paystackConfigured) return badReq(res, 'Payment is not configured. Please contact the administrator.');
 
   try {
     const [[pkg]] = await db.query(
