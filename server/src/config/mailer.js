@@ -43,15 +43,20 @@ const transporter = nodemailer.createTransport(config);
 transporter.verify()
   .then(() => {
     const from = useCpanel ? process.env.SMTP_USER : process.env.GMAIL_USER;
-    console.log('[Mailer] SMTP ready — sending from:', from);
+    if (!from) {
+      console.warn('[Mailer] SMTP verified but sender address is missing from env!');
+    } else {
+      console.log('[Mailer] SMTP ready — sending from:', from);
+    }
   })
   .catch((err) => {
     console.error('\n[Mailer] SMTP FAILED:', err.message);
     if (useCpanel) {
-      console.error('[Mailer] Host:', process.env.SMTP_HOST);
-      console.error('[Mailer] User:', process.env.SMTP_USER);
+      console.error('[Mailer] Host:', process.env.SMTP_HOST || 'NOT SET');
+      console.error('[Mailer] User:', process.env.SMTP_USER || 'NOT SET');
     } else {
-      console.error('[Mailer] Gmail:', process.env.GMAIL_USER);
+      console.error('[Mailer] Gmail User:', process.env.GMAIL_USER || 'NOT SET');
+      console.error('[Mailer] Gmail Pass:', process.env.GMAIL_APP_PASSWORD ? 'PRESENT (HIDDEN)' : 'NOT SET');
     }
     console.error('[Mailer] Emails will fail until SMTP is fixed\n');
   });

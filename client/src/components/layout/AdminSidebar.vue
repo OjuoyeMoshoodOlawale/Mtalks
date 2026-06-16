@@ -17,10 +17,16 @@ const auth  = useAuthStore()
 const unreadMessages = ref(0)
 let pollTimer = null
 const fetchUnread = async () => {
+  if (!auth.isLoggedIn) return
   try {
     const { data } = await api.get('/contacts/unread-count')
     unreadMessages.value = data.data?.count || 0
-  } catch { /* silent */ }
+  } catch (err) {
+    /* If 401, stop polling to avoid log spam / refresh loops */
+    if (err.response?.status === 401) {
+      clearInterval(pollTimer)
+    }
+  }
 }
 onMounted(() => { fetchUnread(); pollTimer = setInterval(fetchUnread, 60000) })
 onUnmounted(() => clearInterval(pollTimer))

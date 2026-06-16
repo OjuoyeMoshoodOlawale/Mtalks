@@ -1,5 +1,6 @@
 const express = require('express');
 const cors    = require('cors');
+const cookieParser = require('cookie-parser');
 const helmet  = require('helmet');
 const hpp     = require('hpp');
 const morgan  = require('morgan');
@@ -47,6 +48,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS']
 }));
+app.use(cookieParser());
 app.use(hpp());
 app.use(xssClean());
 
