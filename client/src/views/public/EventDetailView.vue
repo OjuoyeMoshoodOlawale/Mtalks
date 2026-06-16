@@ -101,39 +101,44 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
 
 const pay = async () => {
   console.log('[PAY] pay() clicked', { selPkg: selPkg.value?.name, isLoggedIn: auth.isLoggedIn })
+  ui.toast('Step 1: Pay clicked — pkg=' + (selPkg.value?.name || 'NONE') + ' | loggedIn=' + auth.isLoggedIn)
 
-  if (!selPkg.value) { ui.toastError('Please select a package first'); return }
+  if (!selPkg.value) { ui.toastError('Step 1 STOP: No package selected'); return }
 
   const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
-  console.log('[PAY] paystackKey:', paystackKey ? paystackKey.slice(0,15)+'...' : 'MISSING')
+  ui.toast('Step 2: key=' + (paystackKey ? paystackKey.slice(0,14)+'...' : 'MISSING'))
 
   if (!paystackKey || !paystackKey.trim() || paystackKey.startsWith('pk_test_xxx') || paystackKey.startsWith('pk_live_xxx')) {
-    ui.toastError('Payment key is not configured. Set VITE_PAYSTACK_PUBLIC_KEY in client/.env.local')
+    ui.toastError('Step 2 STOP: Key not configured — set VITE_PAYSTACK_PUBLIC_KEY in client/.env.local')
     return
   }
   if (!window.PaystackPop) {
-    ui.toastError('Payment script is loading. Please wait a moment and try again.')
+    ui.toastError('Step 3 STOP: PaystackPop script not loaded — refresh page')
     return
   }
 
   /* If not logged in, use guest checkout */
   if (!auth.isLoggedIn) {
+    ui.toast('Step 3: Not logged in — showing guest form')
     if (!guestName.value.trim() || !guestEmail.value.trim()) {
       guestMode.value = true
+      ui.toast('Step 3a: Guest form shown — fill name + email then click Pay again')
       return
     }
     await payAsGuest()
     return
   }
-  if (!selPkg.value) { ui.toastError('Please select a package first'); return }
+  if (!selPkg.value) { ui.toastError('Step 4 STOP: No package selected'); return }
 
   paying.value = true
   try {
+    ui.toast('Step 4: Calling server initialize...')
     console.log('[PAY] Calling /payments/initialize...', { event_id: event.value?.id, package_id: selPkg.value?.id })
     const { data } = await api.post('/payments/initialize', {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
     console.log('[PAY] Server response:', data.data)
+    ui.toast('Step 5: Server OK — ref=' + data.data?.reference?.slice(0,15) + ' opening Paystack...')
     const { reference, amount, authorization_url } = data.data
     openPaystackPopup({
       key:              paystackKey,
@@ -150,7 +155,7 @@ const pay = async () => {
     })
   } catch (e) {
     const msg = e.response?.data?.message || e.message || 'Could not start payment. Is the server running?'
-    ui.toastError(msg)
+    ui.toastError('Step 4 ERROR: ' + msg)
     console.error('[Pay] error:', e)
   } finally { paying.value = false }
 }
