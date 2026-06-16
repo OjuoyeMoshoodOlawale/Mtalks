@@ -50,7 +50,7 @@ onMounted(() => {
     <div class="container">
       <div class="founder-grid">
         <div class="founder-img reveal">
-          <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80&auto=format" alt="Coach Madinah Sanni" />
+          <img src="/images/team/coach-madinah.jpg" alt="Coach Madinah Sanni" />
           <div class="founder-badge"><Award :size="20" color="var(--ma-gold)"/> 15+ Years Experience</div>
         </div>
         <div class="reveal">
