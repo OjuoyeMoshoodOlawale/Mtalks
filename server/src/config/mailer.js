@@ -1,37 +1,59 @@
 /**
- * Nodemailer — Gmail SMTP
- * 
- * Required in server/.env:
- *   GMAIL_USER=themuhsinahacademy@gmail.com
- *   GMAIL_APP_PASSWORD=abcd efgh ijkl mnop   ← 16-char Google App Password (spaces OK)
+ * Nodemailer — supports both cPanel SMTP and Gmail
  *
- * Important: GMAIL_APP_PASSWORD is NOT your Gmail login password.
- * Generate at: Google Account → Security → 2-Step Verification → App Passwords
+ * For cPanel (recommended — better deliverability):
+ *   SMTP_HOST=mail.muhsinahacademy.com
+ *   SMTP_PORT=465
+ *   SMTP_SECURE=true
+ *   SMTP_USER=noreply@muhsinahacademy.com
+ *   SMTP_PASS=your_cpanel_email_password
+ *
+ * For Gmail fallback:
+ *   GMAIL_USER=themuhsinahacademy@gmail.com
+ *   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
  */
 const nodemailer = require('nodemailer');
 
-const user = process.env.GMAIL_USER;
-const pass = process.env.GMAIL_APP_PASSWORD;
+const useCpanel = !!process.env.SMTP_HOST;
 
-if (!user || !pass) {
-  console.warn('[Mailer] GMAIL_USER or GMAIL_APP_PASSWORD not set — emails will fail silently');
+let config;
+if (useCpanel) {
+  config = {
+    host:   process.env.SMTP_HOST,
+    port:   parseInt(process.env.SMTP_PORT) || 465,
+    secure: process.env.SMTP_SECURE !== 'false',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    tls: { rejectUnauthorized: false }  // allow cPanel self-signed certs
+  };
+} else {
+  config = {
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    }
+  };
 }
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user, pass }
-});
+const transporter = nodemailer.createTransport(config);
 
-/* Verify on startup and print clear status */
 transporter.verify()
   .then(() => {
-    console.log('[Mailer] Gmail SMTP ready — sending from:', user);
+    const from = useCpanel ? process.env.SMTP_USER : process.env.GMAIL_USER;
+    console.log('[Mailer] SMTP ready — sending from:', from);
   })
   .catch((err) => {
-    console.error('\n[Mailer] Gmail SMTP FAILED:', err.message);
-    console.error('[Mailer] GMAIL_USER:', user || 'NOT SET');
-    console.error('[Mailer] GMAIL_APP_PASSWORD length:', (pass || '').replace(/\s/g,'').length, 'chars (should be 16)');
-    console.error('[Mailer] Fix: Google Account → Security → 2-Step Verification → App Passwords\n');
+    console.error('\n[Mailer] SMTP FAILED:', err.message);
+    if (useCpanel) {
+      console.error('[Mailer] Host:', process.env.SMTP_HOST);
+      console.error('[Mailer] User:', process.env.SMTP_USER);
+    } else {
+      console.error('[Mailer] Gmail:', process.env.GMAIL_USER);
+    }
+    console.error('[Mailer] Emails will fail until SMTP is fixed\n');
   });
 
 module.exports = transporter;

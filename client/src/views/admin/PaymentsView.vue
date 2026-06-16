@@ -7,6 +7,7 @@ import { CreditCard, Download, Search, Menu } from 'lucide-vue-next'
 
 const payments    = ref([])
 const loading     = ref(true)
+const detail      = ref(null)
 const sidebarOpen = ref(false)
 const search      = ref('')
 const filterType  = ref('')
@@ -117,4 +118,8 @@ const exportCSV = () => {
 .data-table th{text-align:left;padding:12px 16px;font-size:.78rem;color:var(--ma-text-muted);border-bottom:2px solid var(--ma-border);font-weight:600}
 .data-table td{padding:12px 16px;border-bottom:1px solid var(--ma-border);vertical-align:middle}
 .data-table tr:last-child td{border-bottom:none}.data-table tr:hover td{background:var(--ma-off-white)}
+.pay-detail{display:flex;flex-direction:column;gap:12px}
+.pay-detail-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--ma-border);font-size:.9rem}
+.pay-detail-row span:first-child{font-weight:600;color:var(--ma-text-muted);min-width:100px}
+.pay-detail-row code{background:var(--ma-off-white);padding:3px 8px;border-radius:6px;font-size:.82rem}
 </style>

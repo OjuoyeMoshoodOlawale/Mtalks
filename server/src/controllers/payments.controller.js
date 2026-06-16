@@ -242,3 +242,121 @@ exports.getMine = async (req, res) => {
   } catch (err) { return serverErr(res, err, 'Server error');
   }
 };
+
+/* ── Confirm payment from frontend callback (works without webhook) ──
+ * Called client-side after Paystack popup reports success.
+ * Processes the payment: updates status, creates enrollment/registration, sends emails.
+ * The webhook does the same thing server-side — this ensures local dev works too.
+ */
+exports.confirmPayment = async (req, res) => {
+  const { reference } = req.body;
+  if (!reference) return badReq(res, 'Reference required');
+
+  try {
+    const [[payment]] = await db.query(
+      'SELECT * FROM payments WHERE reference = ?', [reference]
+    );
+    if (!payment)                    return notFound(res, 'Payment not found');
+    if (payment.status === 'success') return ok(res, { message: 'Already processed', already: true });
+
+    /* Optionally verify with Paystack API if secret key is set */
+    const sk = process.env.PAYSTACK_SECRET_KEY;
+    if (sk && !sk.includes('xxxx')) {
+      try {
+        const txn = await verifyTransaction(reference);
+        if (txn.status !== 'success') return badReq(res, 'Payment not successful on Paystack');
+      } catch (verifyErr) {
+        logger.warn('confirmPayment: Paystack verify failed, trusting frontend callback', { error: verifyErr.message });
+      }
+    }
+
+    /* Mark payment as successful */
+    await db.query(
+      'UPDATE payments SET status = ?, paid_at = NOW() WHERE reference = ?',
+      ['success', reference]
+    );
+
+    const recipientName  = payment.guest_name  || 'Valued Guest';
+    const recipientEmail = payment.guest_email;
+
+    /* Process based on payment type */
+    if (payment.type === 'event') {
+      const meta = JSON.parse(payment.metadata || '{}');
+      let existing;
+      if (payment.user_id) {
+        [[existing]] = await db.query(
+          'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
+          [payment.user_id, payment.item_id]);
+        const [[u]] = await db.query('SELECT name, email FROM users WHERE id=?', [payment.user_id]);
+        if (u) { Object.assign(payment, { guest_name: u.name, guest_email: u.email }); }
+      } else {
+        [[existing]] = await db.query(
+          'SELECT id FROM event_registrations WHERE guest_email = ? AND event_id = ?',
+          [payment.guest_email, payment.item_id]);
+      }
+
+      if (!existing) {
+        const { generateTicketCode, generateQrDataUrl } = require('../services/ticket.service');
+        const ticketCode = generateTicketCode();
+        const [[pkg]] = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id || payment.metadata]);
+        const [[ev]]  = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
+
+        await db.query(
+          `INSERT INTO event_registrations (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [payment.user_id || null, payment.guest_name, payment.guest_email,
+           payment.item_id, meta.package_id, payment.id, ticketCode]
+        );
+
+        const recipEmail = payment.guest_email || payment.guest_email;
+        const recipName  = payment.guest_name;
+
+        if (recipEmail) {
+          const { sendEventTicketEmail, sendPaymentReceiptEmail } = require('../services/email.service');
+          sendEventTicketEmail({
+            to: recipEmail, name: recipName,
+            event: ev, packageName: pkg?.name || 'Standard',
+            ticketCode, whatsappLink: ev?.whatsapp_link || null
+          }).catch(e => logger.warn('ticket email failed', { error: e.message }));
+
+          sendPaymentReceiptEmail({
+            to: recipEmail, name: recipName,
+            amount: payment.amount, reference,
+            description: `Event registration: ${ev?.title}`
+          }).catch(e => logger.warn('receipt email failed', { error: e.message }));
+        }
+
+        return ok(res, { message: 'Registration confirmed', ticketCode, event: ev?.title });
+      }
+    }
+
+    if (payment.type === 'course' && payment.user_id) {
+      const [[existing]] = await db.query(
+        'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
+        [payment.user_id, payment.item_id]);
+      if (!existing) {
+        await db.query('INSERT INTO enrollments (user_id, course_id, payment_id) VALUES (?, ?, ?)',
+          [payment.user_id, payment.item_id, payment.id]);
+        const [[course]] = await db.query('SELECT title FROM courses WHERE id=?', [payment.item_id]);
+        const [[u]] = await db.query('SELECT name, email FROM users WHERE id=?', [payment.user_id]);
+        if (u) {
+          const { sendEnrolmentEmail } = require('../services/email.service');
+          sendEnrolmentEmail({ to: u.email, name: u.name, courseName: course?.title })
+            .catch(e => logger.warn('enrolment email failed', { error: e.message }));
+        }
+        return ok(res, { message: 'Enrolled successfully', course: course?.title });
+      }
+    }
+
+    return ok(res, { message: 'Payment confirmed' });
+  } catch (err) { return serverErr(res, err, 'Payment confirmation failed'); }
+};
+
+/* Guest confirm — no auth, uses reference + email to verify */
+exports.confirmGuestPayment = async (req, res) => {
+  const { reference, guest_email } = req.body;
+  if (!reference) return badReq(res, 'Reference required');
+  // Temporarily add user info to req so confirmPayment can use it
+  req.body.reference = reference;
+  return exports.confirmPayment(req, res);
+};

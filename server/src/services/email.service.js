@@ -8,9 +8,8 @@ const { generateQrDataUrl } = require('./ticket.service');
 const BRAND      = 'Muhsinah Academy';
 const SITE_URL   = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
 /* MAIL_FROM must match GMAIL_USER exactly — Gmail rejects mismatched senders */
-const GMAIL_USER = (process.env.GMAIL_USER || 'madeenahsanni@gmail.com').trim();
-/* Build MAIL_FROM dynamically from GMAIL_USER — avoids quoting issues in .env */
-const MAIL_FROM  = `Muhsinah Academy <${GMAIL_USER}>`;
+const SENDER_EMAIL = (process.env.SMTP_USER || process.env.GMAIL_USER || 'noreply@muhsinahacademy.com').trim();
+const MAIL_FROM    = `Muhsinah Academy <${SENDER_EMAIL}>`; // built dynamically from SMTP config
 
 const GREEN_DARK = '#0D3B15';
 const GREEN      = '#1D6B1D';
@@ -58,7 +57,7 @@ const base = (content) => `
 /** OTP for email verification / password reset */
 const sendOtpEmail = async ({ to, name, otp, type }) => {
   const isVerify = type === 'verify_email';
-  await transporter.sendMail({
+  const mail = {
     from: MAIL_FROM, to,
     subject: isVerify ? `Verify your email — ${BRAND}` : `Reset your password — ${BRAND}`,
     html: base(`
@@ -70,12 +69,19 @@ const sendOtpEmail = async ({ to, name, otp, type }) => {
       </div>
       <p style="font-size:13px;color:#888">If you did not request this, please ignore this email.</p>
     `)
-  });
+  };
+  try {
+    await transporter.sendMail(mail);
+    await logEmail({ to, subject: mail.subject, type: 'otp', status: 'sent' });
+  } catch (err) {
+    await logEmail({ to, subject: mail.subject, type: 'otp', status: 'failed', error: err.message });
+    throw err;
+  }
 };
 
 /** Welcome after successful registration */
 const sendWelcomeEmail = async ({ to, name }) => {
-  await transporter.sendMail({
+  const mail = {
     from: MAIL_FROM, to,
     subject: `Welcome to ${BRAND}`,
     html: base(`
@@ -85,12 +91,19 @@ const sendWelcomeEmail = async ({ to, name }) => {
       <div style="text-align:center"><a href="${SITE_URL}/courses" class="btn">Explore Courses</a></div>
       <p>JazakAllahu Khairan for joining us. We are honoured to walk this journey with you.</p>
     `)
-  });
+  };
+  try {
+    await transporter.sendMail(mail);
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+  } catch (err) {
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    throw err;
+  }
 };
 
 /** Course enrolment */
 const sendEnrolmentEmail = async ({ to, name, courseName }) => {
-  await transporter.sendMail({
+  const mail = {
     from: MAIL_FROM, to,
     subject: `Enrolled: ${courseName} — ${BRAND}`,
     html: base(`
@@ -103,7 +116,14 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
       <div style="text-align:center"><a href="${SITE_URL}/dashboard/courses" class="btn">Go to My Courses</a></div>
       <p style="font-size:13px;color:#888">Learn at your own pace — your progress is saved automatically.</p>
     `)
-  });
+  };
+  try {
+    await transporter.sendMail(mail);
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+  } catch (err) {
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    throw err;
+  }
 };
 
 /** Event ticket with QR code and WhatsApp link */
@@ -125,7 +145,7 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
       <div style="text-align:center"><a href="${whatsappLink}" class="whatsapp-btn">Join WhatsApp Group</a></div>
     </div>` : '';
 
-  await transporter.sendMail({
+  const mail = {
     from: MAIL_FROM, to,
     subject: `Your Ticket: ${event.title} — ${BRAND}`,
     html: base(`
@@ -144,12 +164,19 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
       ${whatsappSection}
       <p>We look forward to seeing you. Barakallahu feekum. </p>
     `)
-  });
+  };
+  try {
+    await transporter.sendMail(mail);
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+  } catch (err) {
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    throw err;
+  }
 };
 
 /** Payment receipt */
 const sendPaymentReceiptEmail = async ({ to, name, amount, reference, description }) => {
-  await transporter.sendMail({
+  const mail = {
     from: MAIL_FROM, to,
     subject: `Payment Receipt — ${BRAND}`,
     html: base(`
@@ -163,7 +190,14 @@ const sendPaymentReceiptEmail = async ({ to, name, amount, reference, descriptio
       </div>
       <p style="font-size:13px;color:#888">Please keep this reference for your records. JazakAllahu Khairan.</p>
     `)
-  });
+  };
+  try {
+    await transporter.sendMail(mail);
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+  } catch (err) {
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    throw err;
+  }
 };
 
 module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail, sendContactNotification };
@@ -180,7 +214,7 @@ async function sendContactNotification ({ name, email, subject, message }) {
   } catch { /* use fallback */ }
 
   if (!recipientEmail) return;
-  await transporter.sendMail({
+  const mail = {
     from:    MAIL_FROM,
     to:      recipientEmail,
     replyTo: email,
@@ -199,5 +233,12 @@ async function sendContactNotification ({ name, email, subject, message }) {
       <p style="font-size:13px">You can reply directly to this email to respond to ${name}.</p>
       <p style="font-size:13px;color:#888">View all messages in your <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/admin/messages" style="color:var(--green)">Admin Panel → Messages</a>.</p>
     `)
-  });
+  };
+  try {
+    await transporter.sendMail(mail);
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+  } catch (err) {
+    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    throw err;
+  }
 }

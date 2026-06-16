@@ -292,3 +292,16 @@ CREATE TABLE gallery_images (
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_published (is_published, sort_order)
 );
+
+CREATE TABLE IF NOT EXISTS email_logs (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  to_email   VARCHAR(150) NOT NULL,
+  subject    VARCHAR(200),
+  type       VARCHAR(50),
+  status     ENUM('sent','failed') DEFAULT 'sent',
+  error      TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_email (to_email),
+  INDEX idx_status (status),
+  INDEX idx_created (created_at)
+);

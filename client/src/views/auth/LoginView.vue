@@ -14,7 +14,19 @@ const ui     = useUiStore()
 
 const form    = ref({ email: '', password: '' })
 const errors  = ref({})
-const loading = ref(false)
+const loading         = ref(false)
+const unverifiedEmail = ref('')
+const resending       = ref(false)
+
+const resendFromLogin = async () => {
+  resending.value = true
+  try {
+    await api.post('/auth/resend-otp', { email: unverifiedEmail.value, type: 'verify_email' })
+    router.push({ name: 'VerifyEmail', query: { email: unverifiedEmail.value, redirect: route.query.redirect } })
+    ui.toast('Verification code sent! Check your email.')
+  } catch (e) { ui.toastError(e.response?.data?.message || 'Failed to resend') }
+  finally { resending.value = false }
+}
 
 const validate = () => {
   errors.value = {}
@@ -114,4 +126,5 @@ const submit = async () => {
   .auth-right{padding:16px 12px;padding-top:24px}
   .auth-card{padding:20px 16px;box-shadow:none;border:1px solid var(--ma-border)}
 }
+.unverified-banner{background:var(--ma-gold-tint);border:1.5px solid var(--ma-gold);border-radius:var(--radius-md);padding:16px;margin-top:8px}
 </style>
