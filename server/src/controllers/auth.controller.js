@@ -48,19 +48,19 @@ exports.register = async (req, res) => {
       [userId, otp, 'verify_email', expiresAt]
     );
 
-    /* Send OTP email — non-blocking: registration succeeds even if email fails.
-     * In development without SMTP, log the OTP to console so testing is possible. */
+    /* Always log OTP to console in dev — Gmail may silently drop emails */
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n' + '='.repeat(44));
+      console.log('  OTP CODE — ' + email.trim());
+      console.log('  Code: ' + otp + '   (expires 30 min)');
+      console.log('='.repeat(44) + '\n');
+    }
+
+    /* Send OTP email — non-blocking: registration succeeds even if email fails. */
     try {
       await sendOtpEmail({ to: email.trim().toLowerCase(), name: name.trim(), otp, type: 'verify_email' });
     } catch (mailErr) {
       logger.warn('register: OTP email failed — ' + mailErr.message);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('\n========================================');
-        console.log(' OTP (use this to verify — email failed)');
-        console.log(' Code:  ' + otp);
-        console.log(' Email: ' + email);
-        console.log('========================================\n');
-      }
     }
 
     return created(res, { message: 'Account created. Check your email for your verification code.' });
@@ -179,13 +179,16 @@ exports.resendOtp = async (req, res) => {
       [user.id, otp, type, expiresAt]
     );
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n' + '='.repeat(44));
+      console.log('  OTP CODE (resend) — ' + email.trim());
+      console.log('  Code: ' + otp + '   (expires 30 min)');
+      console.log('='.repeat(44) + '\n');
+    }
     try {
       await sendOtpEmail({ to: email.toLowerCase().trim(), name: user.name, otp, type });
     } catch (mailErr) {
-      logger.warn('resendOtp: email failed', {
-        error: mailErr.message,
-        otp:   process.env.NODE_ENV !== 'production' ? otp : '[hidden]'
-      });
+      logger.warn('resendOtp: email failed — ' + mailErr.message);
     }
 
     return ok(res, { message: 'A fresh verification code has been sent to your email.' });
