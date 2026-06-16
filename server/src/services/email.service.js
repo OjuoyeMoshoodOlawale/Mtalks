@@ -4,6 +4,7 @@
  */
 const transporter = require('../config/mailer');
 const { generateQrDataUrl } = require('./ticket.service');
+const db = require('../config/db');
 
 const BRAND      = 'Muhsinah Academy';
 const SITE_URL   = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
@@ -199,6 +200,18 @@ const sendPaymentReceiptEmail = async ({ to, name, amount, reference, descriptio
     throw err;
   }
 };
+
+/** Internal: Log email attempts to DB */
+async function logEmail({ to, subject, type, status, error }) {
+  try {
+    await db.query(
+      'INSERT INTO email_logs (to_email, subject, type, status, error) VALUES (?, ?, ?, ?, ?)',
+      [to, subject, type, status, error || null]
+    );
+  } catch (err) {
+    console.error('[EmailService] Failed to log email to DB:', err.message);
+  }
+}
 
 module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail, sendContactNotification };
 

@@ -40,12 +40,11 @@ exports.register = async (req, res) => {
     const userId = result.insertId;
 
     const otp = genOtp();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     // Clear any previous unused OTPs for this user
     await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [userId, 'verify_email']);
     await db.query(
-      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
-      [userId, otp, 'verify_email', expiresAt]
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
+      [userId, otp, 'verify_email']
     );
 
     /* Always log OTP to console in dev — Gmail may silently drop emails */
@@ -170,13 +169,12 @@ exports.resendOtp = async (req, res) => {
       return badReq(res, 'This account is already verified. Please sign in.');
 
     const otp       = genOtp();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     // Invalidate old OTPs, then insert fresh one
     await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [user.id, type]);
     await db.query(
-      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
-      [user.id, otp, type, expiresAt]
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
+      [user.id, otp, type]
     );
 
     if (process.env.NODE_ENV !== 'production') {
@@ -205,11 +203,10 @@ exports.forgotPassword = async (req, res) => {
 
     const { id, name } = users[0];
     const otp       = genOtp();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
     await db.query(
-      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
-      [id, otp, 'reset_password', expiresAt]
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
+      [id, otp, 'reset_password']
     );
     await sendOtpEmail({ to: email, name, otp, type: 'reset_password' });
 
