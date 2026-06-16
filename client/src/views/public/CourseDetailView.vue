@@ -12,6 +12,7 @@ import BaseButton    from '@/components/common/BaseButton.vue'
 import BaseConfirm   from '@/components/common/BaseConfirm.vue'
 import { ChevronDown, ChevronUp, Play, Lock, CheckCircle, BookOpen } from 'lucide-vue-next'
 import { useSeoMeta } from '@/composables/useSeoMeta'
+import { paystackGrossUp } from '@/utils/paystack'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -49,6 +50,8 @@ const enrol = async () => {
     // Paid: init Paystack
     enrolling.value = true
     try {
+      const paystackPubKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
+      console.log('[PAY] Public key:', paystackPubKey ? paystackPubKey.slice(0,20)+'...' : 'MISSING — check client/.env.local')
       const { data } = await api.post('/payments/initialize', { type: 'course', item_id: course.value.id })
       const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
       if (!paystackKey) {

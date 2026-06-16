@@ -11,6 +11,7 @@ import BaseButton   from '@/components/common/BaseButton.vue'
 import BaseModal    from '@/components/common/BaseModal.vue'
 import { Calendar, MapPin, Monitor, Clock, Users, Tag, CheckCircle, Timer, Lock, CalendarOff } from 'lucide-vue-next'
 import { useSeoMeta } from '@/composables/useSeoMeta'
+import { paystackGrossUp, paystackFeeBreakdown } from '@/utils/paystack'
 
 const route   = useRoute()
 const router  = useRouter()
@@ -64,8 +65,12 @@ const guestEmail = ref('')
 const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUrl, onSuccess, onCancel }) => {
   const amountKobo = Math.round(Number(amountNaira) * 100)
 
-  console.log('[PAY] openPaystackPopup called', { key: key?.slice(0,12)+'...', email, amountKobo, reference, hasAuthUrl: !!authorizationUrl })
+  const grossed  = paystackGrossUp(amountNaira)
+  const { fee }  = paystackFeeBreakdown(amountNaira)
+  const chargeKobo = grossed * 100
+  console.log('[PAY] Public key loaded:', key ? key.slice(0,20)+'...' : 'MISSING — check client/.env.local')
   console.log('[PAY] window.PaystackPop:', typeof window.PaystackPop)
+  console.log('[PAY] Amount breakdown: listed=₦' + amountNaira + ' | Paystack fee=₦' + fee + ' | customer pays=₦' + grossed)
 
   if (!window.PaystackPop || typeof window.PaystackPop.setup !== 'function') {
     console.warn('[PAY] PaystackPop not available — using redirect fallback')
@@ -79,7 +84,7 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
     const handler = window.PaystackPop.setup({
       key,
       email,
-      amount:   amountKobo,
+      amount:   chargeKobo,   // grossed up so merchant receives exact listed price
       ref:      reference,
       currency: 'NGN',
       callback: onSuccess,
@@ -313,9 +318,15 @@ const payAsGuest = async () => {
                 class="w-full"
                 style="justify-content:center;font-size:1rem;padding:14px"
               >
-                {{ selPkg ? 'Pay &#8358;' + Number(pkgPrice(selPkg)).toLocaleString() + ' Now' : 'Select a package above' }}
+                <template v-if="selPkg">
+                  Pay &#8358;{{ paystackGrossUp(Number(pkgPrice(selPkg))).toLocaleString() }} Now
+                </template>
+                <template v-else>Select a package above</template>
               </BaseButton>
 
+              <p v-if="selPkg" style="font-size:.72rem;color:var(--ma-text-muted);text-align:center;margin-top:4px">
+                Listed &#8358;{{ Number(pkgPrice(selPkg)).toLocaleString() }} + &#8358;{{ (paystackGrossUp(Number(pkgPrice(selPkg))) - Number(pkgPrice(selPkg))).toLocaleString() }} Paystack fee
+              </p>
               <p class="reg-secure-note">
                 <Lock :size="12"/> Secured by Paystack &middot; Ticket sent to your email instantly
               </p>
