@@ -85,17 +85,16 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
       callback: onSuccess,
       onClose:  onCancel
     })
-    console.log('[PAY] handler created:', handler)
-    console.log('[PAY] Calling handler.openIframe()...')
+    console.log('[PAY] handler:', handler, 'openIframe fn:', typeof handler?.openIframe)
     handler.openIframe()
-    console.log('[PAY] openIframe() called — popup should be visible now')
+    console.log('[PAY] openIframe() called')
   } catch (err) {
-    console.error('[PAY] openIframe threw an error:', err)
+    console.error('[PAY] setup/openIframe error:', err)
     if (authorizationUrl) {
-      ui.toast('Opening payment page in new tab...')
-      window.open(authorizationUrl, '_blank')
+      ui.toast('Redirecting to payment page...')
+      setTimeout(() => window.open(authorizationUrl, '_blank'), 300)
     } else {
-      ui.toastError('Could not open payment popup. Please refresh and try again.')
+      ui.toastError('Could not open payment. Check browser console for details.')
     }
   }
 }

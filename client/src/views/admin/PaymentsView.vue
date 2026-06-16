@@ -85,7 +85,8 @@ const exportCSV = () => {
               <thead><tr><th>Student</th><th>Type</th><th>Amount</th><th>Reference</th><th>Date</th><th>Status</th></tr></thead>
               <tbody>
                 <tr v-for="p in filtered" :key="p.id">
-                  <td><p style="font-weight:600;margin:0;font-size:.875rem">{{ p.user_name }}</p><p style="font-size:.75rem;color:var(--ma-text-muted);margin:0">{{ p.user_email }}</p></td>
+                  <td><p style="font-weight:600;margin:0;font-size:.875rem">{{ p.user_name }}
+                    <span v-if="!p.user_id" class="table-badge table-badge--grey" style="margin-left:4px;font-size:.68rem">Guest</span></p><p style="font-size:.75rem;color:var(--ma-text-muted);margin:0">{{ p.user_email }}</p></td>
                   <td><span class="badge" :class="p.type==='course'?'badge--green':'badge--gold'">{{ p.type }}</span></td>
                   <td style="font-weight:600">{{ fmt(p.amount) }}</td>
                   <td style="font-family:var(--font-mono);font-size:.75rem;color:var(--ma-text-muted)">{{ p.reference }}</td>

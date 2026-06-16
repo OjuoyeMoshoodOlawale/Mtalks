@@ -229,8 +229,10 @@ exports.getAll = async (req, res) => {
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
   try {
     const [rows] = await db.query(
-      `SELECT p.*, u.name AS user_name, u.email AS user_email
-       FROM payments p JOIN users u ON u.id = p.user_id
+      `SELECT p.*,
+              COALESCE(u.name,  p.guest_name)  AS user_name,
+              COALESCE(u.email, p.guest_email) AS user_email
+       FROM payments p LEFT JOIN users u ON u.id = p.user_id
        ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
       [...vals, limit, offset]
     );
