@@ -1,32 +1,37 @@
 /**
- * Nodemailer transporter — Gmail (free)
+ * Nodemailer — Gmail SMTP
+ * 
+ * Required in server/.env:
+ *   GMAIL_USER=themuhsinahacademy@gmail.com
+ *   GMAIL_APP_PASSWORD=abcd efgh ijkl mnop   ← 16-char Google App Password (spaces OK)
  *
- * Setup steps for Coach Madinah:
- * 1. Sign in to Gmail → Google Account → Security → 2-Step Verification → Enable it
- * 2. Go to Security → App Passwords → Generate a password for "Mail"
- * 3. Copy the 16-character app password into GMAIL_APP_PASSWORD in .env
- * 4. Set GMAIL_USER to your Gmail address
- *
- * Daily limit: ~500 emails/day (Gmail free). Sufficient for this platform.
+ * Important: GMAIL_APP_PASSWORD is NOT your Gmail login password.
+ * Generate at: Google Account → Security → 2-Step Verification → App Passwords
  */
 const nodemailer = require('nodemailer');
 
+const user = process.env.GMAIL_USER;
+const pass = process.env.GMAIL_APP_PASSWORD;
+
+if (!user || !pass) {
+  console.warn('[Mailer] GMAIL_USER or GMAIL_APP_PASSWORD not set — emails will fail silently');
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD // 16-char Google App Password (NOT your login password)
-  }
+  auth: { user, pass }
 });
 
-// Verify connection on startup in development
-if (process.env.NODE_ENV === 'development') {
-  transporter.verify().then(() => {
-    console.log('[Mailer] Gmail SMTP connection verified');
-  }).catch((err) => {
-    console.warn('[Mailer] Gmail SMTP not configured yet:', err.message);
-    console.warn('[Mailer] Set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file');
+/* Verify on startup and print clear status */
+transporter.verify()
+  .then(() => {
+    console.log('[Mailer] Gmail SMTP ready — sending from:', user);
+  })
+  .catch((err) => {
+    console.error('\n[Mailer] Gmail SMTP FAILED:', err.message);
+    console.error('[Mailer] GMAIL_USER:', user || 'NOT SET');
+    console.error('[Mailer] GMAIL_APP_PASSWORD length:', (pass || '').replace(/\s/g,'').length, 'chars (should be 16)');
+    console.error('[Mailer] Fix: Google Account → Security → 2-Step Verification → App Passwords\n');
   });
-}
 
 module.exports = transporter;
