@@ -150,7 +150,7 @@ async function seed() {
     (name,role,bio,photo,sort_order,is_active) VALUES
     ('Coach Madinah Sanni','Founder and Lead Coach',
      'Coach Madinah Sanni is a certified life and marriage coach with over 10 years of experience transforming relationships across Nigeria. She founded Muhsinah Academy to make expert, faith-centred relationship coaching accessible to every Muslim woman and couple regardless of where they are on their journey.',
-     'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400',1,1),
+     '/images/team/coach-madinah.jpg',1,1),
     ('Ustadh Khalid Bello','Marriage Counsellor',
      'Ustadh Khalid combines deep Islamic scholarship with modern counselling frameworks. He has facilitated over 200 pre-marital and marital sessions and is a trusted voice on family values in the Nigerian Muslim community.',
      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',2,1),
