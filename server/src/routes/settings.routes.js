@@ -7,4 +7,5 @@ router.get('/public', ctrl.getPublic);
 
 router.get('/',  verifyToken, requireAdmin, ctrl.getAll);
 router.put('/',  verifyToken, requireAdmin, ctrl.update);
+router.post('/test-email', verifyToken, requireAdmin, ctrl.testEmail);
 module.exports = router;

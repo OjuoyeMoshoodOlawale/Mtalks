@@ -49,3 +49,27 @@ exports.update = async (req, res) => {
 
 exports.create = exports.update;
 exports.remove = async (req, res) => ok(res, { message: 'N/A' });
+
+/* ── Admin: send test email ── */
+exports.testEmail = async (req, res) => {
+  const { to } = req.body;
+  if (!to) return badReq(res, 'Email address required');
+  try {
+    const transporter = require('../config/mailer');
+    await transporter.sendMail({
+      from:    process.env.MAIL_FROM || `"Muhsinah Academy" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: 'Muhsinah Academy — Email Test',
+      html: `<div style="font-family:Arial;padding:24px;max-width:480px;margin:0 auto">
+        <h2 style="color:#0D3B15">Email is working!</h2>
+        <p>This is a test email from Muhsinah Academy.</p>
+        <p>Sent: ${new Date().toLocaleString('en-NG')}</p>
+        <p style="color:#888;font-size:12px">From: ${process.env.GMAIL_USER}</p>
+      </div>`,
+      text: 'Email is working! Sent from Muhsinah Academy at ' + new Date().toLocaleString('en-NG')
+    });
+    return ok(res, { message: 'Test email sent to ' + to + '. Check inbox AND spam folder.' });
+  } catch (err) {
+    return serverErr(res, err, 'Email failed: ' + err.message);
+  }
+};

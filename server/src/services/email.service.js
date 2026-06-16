@@ -7,7 +7,9 @@ const { generateQrDataUrl } = require('./ticket.service');
 
 const BRAND      = 'Muhsinah Academy';
 const SITE_URL   = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
-const MAIL_FROM  = process.env.MAIL_FROM  || '"Muhsinah Academy" <madeenahsanni@gmail.com>';
+/* MAIL_FROM must match GMAIL_USER exactly — Gmail rejects mismatched senders */
+const GMAIL_USER = process.env.GMAIL_USER || 'madeenahsanni@gmail.com';
+const MAIL_FROM  = process.env.MAIL_FROM  || `"Muhsinah Academy" <${GMAIL_USER}>`;
 
 const GREEN_DARK = '#0D3B15';
 const GREEN      = '#1D6B1D';

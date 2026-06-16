@@ -26,6 +26,18 @@ const save = async () => {
   catch { ui.toastError('Save failed') }
   finally { saving.value=false }
 }
+const testEmailAddr = ref('')
+const testingEmail  = ref(false)
+const sendTestEmail = async () => {
+  if (!testEmailAddr.value) { ui.toastError('Enter an email address first'); return }
+  testingEmail.value = true
+  try {
+    const { data } = await api.post('/settings/test-email', { to: testEmailAddr.value })
+    ui.toast(data.data.message)
+  } catch (e) {
+    ui.toastError('Email failed: ' + (e.response?.data?.message || e.message))
+  } finally { testingEmail.value = false }
+}
 </script>
 
 <template>
@@ -96,6 +108,18 @@ const save = async () => {
           </div>
 
           <BaseButton @click="save" :loading="saving" size="lg" style="width:200px"><Save :size="18"/> Save Settings</BaseButton>
+
+          <!-- Email test section -->
+          <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--ma-border)">
+            <h3 style="font-family:var(--font-heading);color:var(--ma-green-dark);margin-bottom:12px;font-size:1rem">Test Email Delivery</h3>
+            <p style="font-size:.85rem;color:var(--ma-text-muted);margin-bottom:12px">
+              Send a test email to confirm Gmail is configured. Check inbox AND spam/junk folder.
+            </p>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input v-model="testEmailAddr" type="email" class="form-input" placeholder="your@email.com" style="max-width:300px"/>
+              <BaseButton :loading="testingEmail" @click="sendTestEmail">Send Test</BaseButton>
+            </div>
+          </div>
         </div>
       </div>
     </div>
