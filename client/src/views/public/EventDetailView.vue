@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore }   from '@/stores/ui'
@@ -99,47 +99,40 @@ const openPaystackPopup = ({ key, email, amountNaira, reference, authorizationUr
   }
 }
 
-const pay = async () => {
-  console.log('[PAY] pay() clicked', { selPkg: selPkg.value?.name, isLoggedIn: auth.isLoggedIn })
-  ui.toast('Step 1: Pay clicked — pkg=' + (selPkg.value?.name || 'NONE') + ' | loggedIn=' + auth.isLoggedIn)
+const guestFormRef = ref(null)
 
-  if (!selPkg.value) { ui.toastError('Step 1 STOP: No package selected'); return }
+const pay = async () => {
+  if (!selPkg.value) { ui.toastError('Please select a package first'); return }
 
   const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY
-  ui.toast('Step 2: key=' + (paystackKey ? paystackKey.slice(0,14)+'...' : 'MISSING'))
-
-  if (!paystackKey || !paystackKey.trim() || paystackKey.startsWith('pk_test_xxx') || paystackKey.startsWith('pk_live_xxx')) {
-    ui.toastError('Step 2 STOP: Key not configured — set VITE_PAYSTACK_PUBLIC_KEY in client/.env.local')
+  if (!paystackKey || !paystackKey.trim() || paystackKey.startsWith('pk_test_xxx')) {
+    ui.toastError('Payment key not configured. Set VITE_PAYSTACK_PUBLIC_KEY in client/.env.local')
     return
   }
   if (!window.PaystackPop) {
-    ui.toastError('Step 3 STOP: PaystackPop script not loaded — refresh page')
+    ui.toastError('Payment script loading — please wait a moment and try again.')
     return
   }
 
-  /* If not logged in, use guest checkout */
+  /* Guest (not logged in) — show name/email form first */
   if (!auth.isLoggedIn) {
-    ui.toast('Step 3: Not logged in — showing guest form')
     if (!guestName.value.trim() || !guestEmail.value.trim()) {
       guestMode.value = true
-      ui.toast('Step 3a: Guest form shown — fill name + email then click Pay again')
+      /* Scroll the guest form into view so it is not missed */
+      await nextTick()
+      guestFormRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     await payAsGuest()
     return
   }
-  if (!selPkg.value) { ui.toastError('Step 4 STOP: No package selected'); return }
 
   paying.value = true
   try {
-    ui.toast('Step 4: Calling server initialize...')
-    console.log('[PAY] Calling /payments/initialize...', { event_id: event.value?.id, package_id: selPkg.value?.id })
     const { data } = await api.post('/payments/initialize', {
       type: 'event', item_id: event.value.id, package_id: selPkg.value.id
     })
-    console.log('[PAY] Server response:', data.data)
-    ui.toast('Step 5: Server OK — ref=' + data.data?.reference?.slice(0,15) + ' opening Paystack...')
-    const { reference, amount, authorization_url } = data.data
+    const { reference, authorization_url } = data.data
     openPaystackPopup({
       key:              paystackKey,
       email:            auth.user.email,
@@ -154,9 +147,8 @@ const pay = async () => {
       onCancel: () => { ui.toastError('Payment was cancelled.') }
     })
   } catch (e) {
-    const msg = e.response?.data?.message || e.message || 'Could not start payment. Is the server running?'
-    ui.toastError('Step 4 ERROR: ' + msg)
-    console.error('[Pay] error:', e)
+    ui.toastError(e.response?.data?.message || e.message || 'Payment failed. Please try again.')
+    console.error('[pay]', e)
   } finally { paying.value = false }
 }
 
@@ -307,6 +299,8 @@ const payAsGuest = async () => {
 .pkg-deadline{display:flex;align-items:center;gap:4px;font-size:.75rem;color:#7A5F00;margin-top:8px}
 .early-bird-badge{position:absolute;top:-10px;right:10px;background:var(--ma-gold);color:#000;padding:2px 10px;border-radius:10px;font-size:.72rem;font-weight:700}
 .guest-form{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px}
+.guest-form--active{border-color:var(--ma-gold);background:var(--ma-gold-tint);animation:pulse-border 1.5s ease-in-out 2}
+@keyframes pulse-border{0%,100%{border-color:var(--ma-gold)}50%{border-color:var(--ma-green-dark);box-shadow:0 0 0 3px rgba(212,160,23,.2)}}
 .guest-form-title{font-size:.82rem;font-weight:700;color:var(--ma-green-dark);margin-bottom:10px}
 .guest-hint{font-size:.72rem;color:var(--ma-text-muted);margin-top:4px}
 .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
@@ -322,6 +316,8 @@ const payAsGuest = async () => {
 .packages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 @media(max-width:960px){
   .guest-form{background:var(--ma-off-white);border:1px solid var(--ma-border);border-radius:var(--radius-md);padding:14px;margin-bottom:4px}
+.guest-form--active{border-color:var(--ma-gold);background:var(--ma-gold-tint);animation:pulse-border 1.5s ease-in-out 2}
+@keyframes pulse-border{0%,100%{border-color:var(--ma-gold)}50%{border-color:var(--ma-green-dark);box-shadow:0 0 0 3px rgba(212,160,23,.2)}}
 .guest-form-title{font-size:.82rem;font-weight:700;color:var(--ma-green-dark);margin-bottom:10px}
 .guest-hint{font-size:.72rem;color:var(--ma-text-muted);margin-top:4px}
 .reg-pkg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px}
