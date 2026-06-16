@@ -118,6 +118,7 @@ const pay = async () => {
   if (!auth.isLoggedIn) {
     if (!guestName.value.trim() || !guestEmail.value.trim()) {
       guestMode.value = true
+      ui.toast('Enter your name and email below, then click Pay again')
       /* Scroll the guest form into view so it is not missed */
       await nextTick()
       guestFormRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -262,8 +263,9 @@ const payAsGuest = async () => {
                 :disabled="!selPkg"
                 class="w-full"
                 style="justify-content:center;margin-top:16px;font-size:1rem;padding:14px"
+                :style="!selPkg ? 'opacity:0.55;cursor:not-allowed' : ''"
               >
-                Pay {{ selPkg ? "₦" + Number(pkgPrice(selPkg)).toLocaleString() : "" }} Now
+                {{ selPkg ? 'Pay &#8358;' + Number(pkgPrice(selPkg)).toLocaleString() + ' Now' : 'Select a package above' }}
               </BaseButton>
               <p style="font-size:.75rem;color:var(--ma-text-muted);margin-top:10px;text-align:center">
                  Secured by Paystack · Your ticket is sent to your email
