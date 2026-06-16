@@ -1,14 +1,14 @@
 /**
- * Nodemailer — supports both cPanel SMTP and Gmail
+ * Nodemailer — cPanel SMTP (primary) or Gmail (fallback)
  *
- * For cPanel (recommended — better deliverability):
- *   SMTP_HOST=mail.muhsinahacademy.com
+ * cPanel SSL/TLS (recommended):
+ *   SMTP_HOST=mail.themuhsinahacademy.com
  *   SMTP_PORT=465
  *   SMTP_SECURE=true
- *   SMTP_USER=noreply@muhsinahacademy.com
- *   SMTP_PASS=your_cpanel_email_password
+ *   SMTP_USER=noreply@themuhsinahacademy.com
+ *   SMTP_PASS=<email account password>
  *
- * For Gmail fallback:
+ * Gmail fallback (optional):
  *   GMAIL_USER=themuhsinahacademy@gmail.com
  *   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
  */

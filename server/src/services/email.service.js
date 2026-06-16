@@ -206,7 +206,7 @@ module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEvent
 async function sendContactNotification ({ name, email, subject, message }) {
   // Primary recipient = site_email from settings (Coach Madinah's inbox)
   // Fallback = GMAIL_USER (the sending account) if settings not available
-  let recipientEmail = process.env.GMAIL_USER;
+  let recipientEmail = process.env.SMTP_USER || process.env.GMAIL_USER;
   try {
     const db = require('../config/db');
     const [[row]] = await db.query("SELECT `value` FROM settings WHERE `key` = 'site_email'");

@@ -3,7 +3,7 @@ const db = require('../config/db');
 const { initializeTransaction, verifyTransaction, verifyWebhookSignature } = require('../services/paystack.service');
 const { sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail } = require('../services/email.service');
 const { generateTicketCode } = require('../services/ticket.service');
-const { ok, created, badReq, serverErr, paginate } = require('../utils/helpers');
+const { ok, created, badReq, notFound, serverErr, paginate } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
 /* ── Initialize payment ── */
@@ -276,8 +276,13 @@ exports.confirmPayment = async (req, res) => {
       ['success', reference]
     );
 
-    const recipientName  = payment.guest_name  || 'Valued Guest';
-    const recipientEmail = payment.guest_email;
+    /* Resolve recipient — for logged-in users pull from users table */
+    let recipientName  = payment.guest_name  || 'Valued Guest';
+    let recipientEmail = payment.guest_email || null;
+    if (payment.user_id) {
+      const [[u]] = await db.query('SELECT name, email FROM users WHERE id = ?', [payment.user_id]);
+      if (u) { recipientName = u.name; recipientEmail = u.email; }
+    }
 
     /* Process based on payment type */
     if (payment.type === 'event') {
@@ -287,8 +292,6 @@ exports.confirmPayment = async (req, res) => {
         [[existing]] = await db.query(
           'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
           [payment.user_id, payment.item_id]);
-        const [[u]] = await db.query('SELECT name, email FROM users WHERE id=?', [payment.user_id]);
-        if (u) { Object.assign(payment, { guest_name: u.name, guest_email: u.email }); }
       } else {
         [[existing]] = await db.query(
           'SELECT id FROM event_registrations WHERE guest_email = ? AND event_id = ?',
@@ -296,31 +299,28 @@ exports.confirmPayment = async (req, res) => {
       }
 
       if (!existing) {
-        const { generateTicketCode, generateQrDataUrl } = require('../services/ticket.service');
+        const { generateTicketCode } = require('../services/ticket.service');
         const ticketCode = generateTicketCode();
-        const [[pkg]] = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id || payment.metadata]);
+        const [[pkg]] = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id]);
         const [[ev]]  = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
 
         await db.query(
           `INSERT INTO event_registrations (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [payment.user_id || null, payment.guest_name, payment.guest_email,
+          [payment.user_id || null, payment.guest_name || recipientName, payment.guest_email || recipientEmail,
            payment.item_id, meta.package_id, payment.id, ticketCode]
         );
 
-        const recipEmail = payment.guest_email || payment.guest_email;
-        const recipName  = payment.guest_name;
-
-        if (recipEmail) {
+        if (recipientEmail) {
           const { sendEventTicketEmail, sendPaymentReceiptEmail } = require('../services/email.service');
           sendEventTicketEmail({
-            to: recipEmail, name: recipName,
+            to: recipientEmail, name: recipientName,
             event: ev, packageName: pkg?.name || 'Standard',
             ticketCode, whatsappLink: ev?.whatsapp_link || null
           }).catch(e => logger.warn('ticket email failed', { error: e.message }));
 
           sendPaymentReceiptEmail({
-            to: recipEmail, name: recipName,
+            to: recipientEmail, name: recipientName,
             amount: payment.amount, reference,
             description: `Event registration: ${ev?.title}`
           }).catch(e => logger.warn('receipt email failed', { error: e.message }));
