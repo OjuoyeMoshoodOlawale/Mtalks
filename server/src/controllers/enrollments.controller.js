@@ -61,3 +61,49 @@ exports.remove = async (req, res) => {
     return ok(res, { message: 'Enrollment removed' });
   } catch (err) { return serverErr(res, err, 'Server error'); }
 };
+
+/* ── Admin: export course enrollments as CSV ── */
+exports.exportCsv = async (req, res) => {
+  const { course_id } = req.query;
+  try {
+    const where = course_id ? 'WHERE e.course_id = ?' : '';
+    const vals  = course_id ? [course_id] : [];
+    const [rows] = await db.query(
+      `SELECT
+         u.name, u.email, u.is_active,
+         c.title AS course_title,
+         e.enrolled_at,
+         COUNT(lp.id) AS lessons_done,
+         (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id=l.module_id WHERE m.course_id=e.course_id) AS total_lessons
+       FROM enrollments e
+       JOIN users u     ON u.id = e.user_id
+       JOIN courses c   ON c.id = e.course_id
+       LEFT JOIN lesson_progress lp ON lp.user_id = e.user_id
+         AND lp.lesson_id IN (SELECT l.id FROM lessons l JOIN modules m ON m.id=l.module_id WHERE m.course_id=e.course_id)
+       ${where}
+       GROUP BY e.id
+       ORDER BY e.enrolled_at DESC`,
+      vals
+    );
+
+    const header = 'Name,Email,Course,Enrolled Date,Lessons Done,Total Lessons,Progress %,Status\n';
+    const csvRows = rows.map(r => {
+      const pct = r.total_lessons > 0 ? Math.round((r.lessons_done/r.total_lessons)*100) : 0;
+      return [
+        `"${(r.name || '').replace(/"/g,'""')}"`,
+        `"${(r.email || '').replace(/"/g,'""')}"`,
+        `"${(r.course_title || '').replace(/"/g,'""')}"`,
+        r.enrolled_at ? new Date(r.enrolled_at).toLocaleDateString('en-NG') : '',
+        r.lessons_done,
+        r.total_lessons,
+        pct + '%',
+        r.is_active ? 'Active' : 'Banned'
+      ].join(',');
+    });
+
+    const csv = header + csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="enrollments-${Date.now()}.csv"`);
+    res.send(csv);
+  } catch (err) { return serverErr(res, err, 'Export failed'); }
+};

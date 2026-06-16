@@ -12,7 +12,7 @@ const MAIL_FROM  = process.env.MAIL_FROM  || '"Muhsinah Academy" <madeenahsanni@
 const GREEN_DARK = '#0D3B15';
 const GREEN      = '#1D6B1D';
 const GREEN_TINT = '#EBF7DC';
-const GOLD       = '#F0C130';
+const GOLD       = '#D4A017';
 
 const base = (content) => `
 <!DOCTYPE html><html lang="en">
@@ -60,7 +60,7 @@ const sendOtpEmail = async ({ to, name, otp, type }) => {
     subject: isVerify ? `Verify your email — ${BRAND}` : `Reset your password — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Use this code to ${isVerify ? 'verify your email' : 'reset your password'}. It expires in <strong>15 minutes</strong>.</p>
+      <p>Use this code to ${isVerify ? 'verify your email' : 'reset your password'}. It expires in <strong>30 minutes</strong>.</p>
       <div class="ticket">
         <p style="color:#6B7B6B;margin:0 0 8px;font-size:13px">Your verification code</p>
         <div class="ticket-code">${otp}</div>
@@ -112,8 +112,8 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
   const timeStr = new Date(event.event_date).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
 
   const locationHtml = event.type === 'offline'
-    ? `<div class="info"><span class="label">Venue</span><span>📍 ${event.venue}</span></div>`
-    : `<div class="info"><span class="label">Format</span><span>💻 Online — link in this email</span></div>`;
+    ? `<div class="info"><span class="label">Venue</span><span> ${event.venue}</span></div>`
+    : `<div class="info"><span class="label">Format</span><span> Online — link in this email</span></div>`;
 
   const whatsappSection = whatsappLink ? `
     <div class="whatsapp-box">
@@ -131,15 +131,15 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
       <div class="ticket">
         <span class="gold-badge">${packageName}</span>
         <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-        <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
-        <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
+        <div class="info" style="justify-content:center"><span> ${dateStr}</span></div>
+        <div class="info" style="justify-content:center"><span> ${timeStr}</span></div>
         ${locationHtml}
         <img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>
         <div class="ticket-code">${ticketCode}</div>
         <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code at the event entrance</p>
       </div>
       ${whatsappSection}
-      <p>We look forward to seeing you. Barakallahu feekum. 🌿</p>
+      <p>We look forward to seeing you. Barakallahu feekum. </p>
     `)
   });
 };

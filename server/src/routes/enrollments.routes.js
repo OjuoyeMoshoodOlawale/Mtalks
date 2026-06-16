@@ -6,4 +6,5 @@ router.get('/',     verifyToken, requireAdmin, ctrl.getAll);
 router.get('/my',   verifyToken, ctrl.getMine);
 router.post('/',    verifyToken, ctrl.create);
 router.delete('/:id', verifyToken, requireAdmin, ctrl.remove);
+router.get('/export-csv', verifyToken, requireAdmin, ctrl.exportCsv);
 module.exports = router;

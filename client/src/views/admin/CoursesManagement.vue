@@ -9,7 +9,7 @@ import BaseModal     from '@/components/common/BaseModal.vue'
 import BaseButton    from '@/components/common/BaseButton.vue'
 import BaseInput     from '@/components/common/BaseInput.vue'
 import BaseConfirm   from '@/components/common/BaseConfirm.vue'
-import { Plus, Pencil, Trash2, Eye, EyeOff, BookOpen, Menu } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Eye, EyeOff, BookOpen, Menu, Download } from 'lucide-vue-next'
 
 const ui          = useUiStore()
 const courses     = ref([])
@@ -70,6 +70,9 @@ const togglePublish = async (c) => {
 }
 
 const fmt = (n) => `₦${Number(n).toLocaleString()}`
+const exportEnrollments = (courseId) => {
+  window.open(`/api/enrollments/export-csv?course_id=${courseId}`, '_blank')
+}
 </script>
 
 <template>
@@ -109,6 +112,7 @@ const fmt = (n) => `₦${Number(n).toLocaleString()}`
                   <td>
                     <div style="display:flex;gap:8px">
                       <RouterLink :to="`/courses/${c.slug}`" target="_blank" class="action-btn" title="Preview as student"><Eye :size="14"/> Preview</RouterLink>
+                      <button @click="exportEnrollments(c.id)" class="action-btn" title="Export student list"><Download :size="14"/> Students</button>
                       <RouterLink :to="`/admin/courses/${c.id}/edit`" class="action-btn" title="Edit curriculum"><Pencil :size="16"/> Curriculum</RouterLink>
                       <button @click="openEdit(c)" class="action-btn" title="Edit details"><Pencil :size="16"/> Info</button>
                       <button @click="openDelete(c)" class="action-btn danger" title="Delete"><Trash2 :size="16"/></button>

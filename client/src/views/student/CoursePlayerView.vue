@@ -29,7 +29,26 @@ const totalLessons = computed(() => flatLessons.value.length)
 const pct = computed(() => totalLessons.value > 0 ? Math.round((totalDone.value / totalLessons.value) * 100) : 0)
 
 
+const videoEmbedError = ref(false)
+
+const onIframeLoad = (e) => {
+  /* YouTube posts a message when playback fails (Error 153 = embedding disabled) */
+  videoEmbedError.value = false
+}
+
+/* Listen for YouTube playback errors via postMessage */
+const onYTMessage = (e) => {
+  if (typeof e.data === 'string') {
+    try {
+      const d = JSON.parse(e.data)
+      if (d.event === 'infoDelivery' && d.info?.errorCode) {
+        videoEmbedError.value = true
+      }
+    } catch {}
+  }
+}
 onMounted(async () => {
+  window.addEventListener('message', onYTMessage)
   try {
     const [enrollRes, progressRes] = await Promise.all([
       api.get('/enrollments/my'),
@@ -125,7 +144,7 @@ const submitQuiz = async () => {
 }
 
 const retakeQuiz = () => { quizResult.value = null; answers.value = {} }
-const showTranscript = ref(false)
+onUnmounted(() => { window.removeEventListener('message', onYTMessage) })
 
 const resultFor = (qId) => quizResult.value?.results?.find(r => r.question_id === qId)
 
@@ -201,13 +220,27 @@ const claimCertificate = async () => {
 
           <!-- Protected player -->
           <div v-else-if="videoUrl" class="video-shield" @contextmenu.prevent>
+            <div v-if="videoEmbedError" class="video-embed-error">
+              <div style="font-size:2.5rem;margin-bottom:12px">&#9654;</div>
+              <p style="font-weight:700;margin:0 0 6px">This video cannot be embedded</p>
+              <p style="font-size:.85rem;opacity:.75;margin:0 0 18px">The video owner has disabled playback on external sites.</p>
+              <a
+                :href="'https://www.youtube.com/watch?v=' + current.drive_file_id"
+                target="_blank" rel="noopener noreferrer"
+                class="yt-fallback-btn"
+              >
+                Watch on YouTube
+              </a>
+            </div>
             <iframe
-              :src="videoUrl"
+              v-else
+              :src="videoUrl + '&enablejsapi=1&origin=' + encodeURIComponent(location.origin)"
               class="drive-frame"
               allow="autoplay; encrypted-media; picture-in-picture"
               allowfullscreen
               referrerpolicy="no-referrer"
               sandbox="allow-scripts allow-same-origin allow-presentation"
+              @load="onIframeLoad"
             />
           </div>
 
@@ -376,6 +409,17 @@ const claimCertificate = async () => {
 .player-main{flex:1;overflow-y:auto;padding:24px}
 .video-area{max-width:900px;margin:0 auto}
 .drive-frame{width:100%;aspect-ratio:16/9;border:none;border-radius:var(--radius-lg);background:#000;display:block}
+.video-embed-error{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(13,59,21,.92);color:var(--ma-white);text-align:center;padding:32px
+}
+.yt-fallback-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 24px;background:#FF0000;color:#fff;
+  text-decoration:none;border-radius:8px;font-weight:700;font-size:.95rem;
+  transition:background .15s
+}
+.yt-fallback-btn:hover{background:#cc0000}
 .video-placeholder{aspect-ratio:16/9;background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.15);border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:rgba(255,255,255,.4)}
 .player-controls{padding:20px 4px;display:flex;flex-direction:column;gap:16px}
 .lesson-title{font-family:var(--font-heading);font-size:1.2rem;color:#fff;margin-bottom:8px}
