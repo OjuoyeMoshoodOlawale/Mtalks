@@ -2,7 +2,21 @@ const crypto = require('crypto');
 const fetch  = require('node-fetch');
 
 const BASE = 'https://api.paystack.co';
-const SK   = () => process.env.PAYSTACK_SECRET_KEY;
+
+/**
+ * Paystack keys — hardcoded as constants while .env loading is being fixed.
+ * Swap to process.env.X once .env is confirmed:
+ *   const PAYSTACK_SECRET_KEY  = process.env.PAYSTACK_SECRET_KEY;
+ *   const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET;
+ *
+ * Get your keys from: https://dashboard.paystack.com/#/settings/developer
+ * Use sk_test_... for test mode, sk_live_... for production.
+ */
+const PAYSTACK_SECRET_KEY     = 'REPLACE_WITH_PAYSTACK_SECRET_KEY';     // sk_test_... or sk_live_...
+const PAYSTACK_WEBHOOK_SECRET = 'REPLACE_WITH_PAYSTACK_WEBHOOK_SECRET'; // from Paystack dashboard
+
+const SK      = () => PAYSTACK_SECRET_KEY;
+const WH_SEC  = () => PAYSTACK_WEBHOOK_SECRET;
 
 const headers = () => ({
   Authorization:  `Bearer ${SK()}`,
@@ -38,7 +52,7 @@ const verifyTransaction = async (reference) => {
 /** Verify webhook signature from Paystack */
 const verifyWebhookSignature = (rawBody, signature) => {
   const hash = crypto
-    .createHmac('sha512', process.env.PAYSTACK_WEBHOOK_SECRET)
+    .createHmac('sha512', WH_SEC())
     .update(rawBody)
     .digest('hex');
   return hash === signature;

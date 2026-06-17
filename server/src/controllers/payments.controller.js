@@ -321,12 +321,19 @@ exports.confirmPayment = async (req, res) => {
           return ok(res, { message: 'Payment confirmed — registration will be processed shortly', ticketCode, event: ev?.title });
         }
 
+        /* Send ticket + receipt — track actual delivery status for honest response */
+        let emailSent = false;
         if (recipientEmail) {
-          sendEventTicketEmail({
-            to: recipientEmail, name: recipientName,
-            event: ev, pkg, packageName: pkg?.name || 'Standard',
-            ticketCode
-          }).catch(e => logger.warn('ticket email failed', { error: e.message }));
+          try {
+            await sendEventTicketEmail({
+              to: recipientEmail, name: recipientName,
+              event: ev, pkg, packageName: pkg?.name || 'Standard',
+              ticketCode
+            });
+            emailSent = true;
+          } catch (emailErr) {
+            logger.warn('confirmPayment: ticket email failed', { error: emailErr.message, reference });
+          }
 
           sendPaymentReceiptEmail({
             to: recipientEmail, name: recipientName,
@@ -335,7 +342,15 @@ exports.confirmPayment = async (req, res) => {
           }).catch(e => logger.warn('receipt email failed', { error: e.message }));
         }
 
-        return ok(res, { message: 'Registration confirmed', ticketCode, event: ev?.title });
+        return ok(res, {
+          message:   'Registration confirmed',
+          ticketCode,
+          event:     ev?.title,
+          emailSent,
+          emailNote: emailSent
+            ? `Ticket sent to ${recipientEmail}`
+            : `Registration saved — ticket email could not be delivered to ${recipientEmail}. Please contact support.`
+        });
       }
     }
 
