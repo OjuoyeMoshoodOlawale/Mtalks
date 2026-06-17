@@ -1,12 +1,170 @@
-const { v4: uuidv4 } = require('uuid');
-const db = require('../config/db');
-const { initializeTransaction, verifyTransaction, verifyWebhookSignature } = require('../services/paystack.service');
-const { sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail } = require('../services/email.service');
+/**
+ * Payments Controller — Mtalks / Muhsinah Academy
+ *
+ * Standard Paystack flow:
+ *  1. POST /initialize         → create payment record (pending), get reference
+ *  2. Paystack popup runs      → user pays
+ *  3. GET  /verify?reference=  → verify with Paystack API, update DB, send email
+ *     (also accepts POST /verify for popup callback mode)
+ *  4. POST /webhook            → server-side safety net from Paystack
+ *
+ * /confirm and /confirm-guest are kept for backward compat but now delegate to verifyPayment.
+ */
+
+const { v4: uuidv4 }  = require('uuid');
+const db              = require('../config/db');
+const { initializeTransaction, verifyTransaction, verifyWebhookSignature } =
+  require('../services/paystack.service');
+const { sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail } =
+  require('../services/email.service');
 const { generateTicketCode } = require('../services/ticket.service');
-const { ok, created, badReq, notFound, serverErr, paginate } = require('../utils/helpers');
+const { ok, created, badReq, notFound, serverErr, paginate } =
+  require('../utils/helpers');
 const logger = require('../utils/logger');
 
-/* ── Initialize payment ── */
+/* ─────────────────────────────────────────────
+   SHARED: resolve recipient name + email
+───────────────────────────────────────────── */
+const _getRecipient = async (payment) => {
+  let name  = payment.guest_name  || 'Valued Guest';
+  let email = payment.guest_email || null;
+  if (payment.user_id) {
+    const [[u]] = await db.query('SELECT name, email FROM users WHERE id = ?', [payment.user_id]);
+    if (u) { name = u.name; email = u.email; }
+  }
+  return { name, email };
+};
+
+/* ─────────────────────────────────────────────
+   SHARED: process event payment after DB is marked success
+───────────────────────────────────────────── */
+const _processEvent = async (payment, reference, recipientName, recipientEmail) => {
+  const meta = (() => { try { return JSON.parse(payment.metadata || '{}'); } catch { return {}; } })();
+
+  console.log('[_processEvent] meta:', meta, '| item_id:', payment.item_id);
+
+  /* Idempotency — skip if registration already exists */
+  let existingReg;
+  if (payment.user_id) {
+    [[existingReg]] = await db.query(
+      'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
+      [payment.user_id, payment.item_id]
+    );
+  } else {
+    [[existingReg]] = await db.query(
+      'SELECT id FROM event_registrations WHERE guest_email = ? AND event_id = ?',
+      [payment.guest_email, payment.item_id]
+    );
+  }
+
+  if (existingReg) {
+    console.log('[_processEvent] registration already exists — skipping insert');
+    return { message: 'Already registered', emailSent: false };
+  }
+
+  const ticketCode = generateTicketCode();
+  const [[pkg]]    = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id]);
+  const [[ev]]     = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
+
+  console.log('[_processEvent] pkg:', pkg?.name, '| event:', ev?.title);
+
+  /* Insert registration */
+  try {
+    await db.query(
+      `INSERT INTO event_registrations
+         (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        payment.user_id   || null,
+        payment.guest_name  || recipientName,
+        payment.guest_email || recipientEmail,
+        payment.item_id,
+        meta.package_id,
+        payment.id,
+        ticketCode,
+      ]
+    );
+    console.log('[_processEvent] ✅ event_registrations row inserted — ticket:', ticketCode);
+  } catch (regErr) {
+    console.error('[_processEvent] ❌ INSERT failed:', regErr.message);
+    logger.error('_processEvent: INSERT event_registrations failed', { error: regErr.message, reference });
+    /* Payment already success — don't let a registration DB error block the response */
+    return { message: 'Payment confirmed, registration pending manual review', emailSent: false, ticketCode };
+  }
+
+  /* Send ticket email */
+  let emailSent = false;
+  if (recipientEmail) {
+    console.log('[_processEvent] sending ticket email to:', recipientEmail);
+    try {
+      await sendEventTicketEmail({
+        to:          recipientEmail,
+        name:        recipientName,
+        event:       ev,
+        pkg,
+        packageName: pkg?.name || 'Standard',
+        ticketCode,
+      });
+      emailSent = true;
+      console.log('[_processEvent] ✅ ticket email sent');
+    } catch (mailErr) {
+      console.error('[_processEvent] ❌ ticket email failed:', mailErr.message);
+      logger.warn('_processEvent: ticket email failed', { error: mailErr.message, reference });
+    }
+
+    /* Receipt — fire and forget */
+    sendPaymentReceiptEmail({
+      to:          recipientEmail,
+      name:        recipientName,
+      amount:      payment.amount,
+      reference,
+      description: `Event registration: ${ev?.title}`,
+    }).catch(e => logger.warn('receipt email failed', { error: e.message }));
+  }
+
+  return {
+    message:     'Event registration confirmed',
+    ticketCode,
+    event:       ev?.title,
+    emailSent,
+    emailNote:   emailSent
+      ? `Ticket sent to ${recipientEmail}`
+      : `Registration saved — ticket email failed. Check mailer config or contact support.`,
+  };
+};
+
+/* ─────────────────────────────────────────────
+   SHARED: process course payment after DB is marked success
+───────────────────────────────────────────── */
+const _processCourse = async (payment, reference, recipientName, recipientEmail) => {
+  if (!payment.user_id) return { message: 'Course payment confirmed (guest — no enrolment)' };
+
+  const [[existing]] = await db.query(
+    'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
+    [payment.user_id, payment.item_id]
+  );
+  if (existing) {
+    console.log('[_processCourse] already enrolled');
+    return { message: 'Already enrolled' };
+  }
+
+  await db.query(
+    'INSERT INTO enrollments (user_id, course_id, payment_id) VALUES (?, ?, ?)',
+    [payment.user_id, payment.item_id, payment.id]
+  );
+
+  const [[course]] = await db.query('SELECT title FROM courses WHERE id = ?', [payment.item_id]);
+  console.log('[_processCourse] ✅ enrolled in:', course?.title);
+
+  sendEnrolmentEmail({ to: recipientEmail, name: recipientName, courseName: course?.title })
+    .catch(e => logger.warn('enrolment email failed', { error: e.message }));
+
+  return { message: 'Enrolled successfully', course: course?.title };
+};
+
+/* ═══════════════════════════════════════════════════════════
+   POST /api/payments/initialize  (auth required)
+══════════════════════════════════════════════════════════ */
 exports.initialize = async (req, res) => {
   const { type, item_id } = req.body;
   const userId = req.user.id;
@@ -17,16 +175,16 @@ exports.initialize = async (req, res) => {
     let amount, description, metadata = {};
 
     if (type === 'course') {
-      const [[course]] = await db.query('SELECT id, title, price, is_free FROM courses WHERE id = ?', [item_id]);
+      const [[course]] = await db.query('SELECT * FROM courses WHERE id = ?', [item_id]);
       if (!course) return badReq(res, 'Course not found');
-      if (course.is_free || course.price === 0) return badReq(res, 'This course is free. No payment needed.');
+      if (course.is_free || course.price === 0) return badReq(res, 'This course is free — no payment needed');
       const [[existing]] = await db.query(
         'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?', [userId, item_id]
       );
       if (existing) return badReq(res, 'You are already enrolled in this course');
-      amount = course.price;
+      amount      = course.price;
       description = `Course: ${course.title}`;
-      metadata = { course_id: course.id, course_title: course.title };
+      metadata    = { course_id: course.id, course_title: course.title };
     }
 
     if (type === 'event') {
@@ -34,184 +192,241 @@ exports.initialize = async (req, res) => {
       const [[pkg]] = await db.query('SELECT * FROM event_packages WHERE id = ?', [package_id]);
       if (!pkg) return badReq(res, 'Package not found');
 
-      const now = new Date();
-      const isEarlyBird = pkg.early_bird_price && pkg.early_bird_deadline && new Date(pkg.early_bird_deadline) > now;
+      const now          = new Date();
+      const isEarlyBird  = pkg.early_bird_price && pkg.early_bird_deadline && new Date(pkg.early_bird_deadline) > now;
       amount = isEarlyBird ? pkg.early_bird_price : pkg.price;
 
-      const [[event]] = await db.query('SELECT id, title, deadline FROM events WHERE id = ?', [item_id]);
-      if (!event) return badReq(res, 'Event not found');
-      if (new Date(event.deadline) < now) return badReq(res, 'Registration deadline has passed');
+      const [[event]] = await db.query('SELECT * FROM events WHERE id = ?', [item_id]);
+      if (!event)                          return badReq(res, 'Event not found');
+      if (new Date(event.deadline) < now)  return badReq(res, 'Registration deadline has passed');
 
       description = `Event: ${event.title} — ${pkg.name}`;
-      metadata = { event_id: event.id, package_id: pkg.id, package_name: pkg.name };
+      metadata    = { event_id: event.id, package_id: pkg.id, package_name: pkg.name };
     }
 
     const reference = `MTK-${type.toUpperCase()}-${uuidv4().split('-')[0].toUpperCase()}`;
 
     await db.query(
-      'INSERT INTO payments (user_id, type, item_id, amount, reference, metadata) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO payments (user_id, type, item_id, amount, reference, status, metadata)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
       [userId, type, item_id, amount, reference, JSON.stringify(metadata)]
     );
 
-    /* Try to pre-register with Paystack (gives us authorization_url for redirect fallback).
-     * If this fails (network, wrong key) we still return the reference so the
-     * client-side inline popup can attempt it directly. */
+    console.log('\n[initialize] ✅ Payment record created:', reference, '| amount:', amount, '| type:', type);
+
     let authorization_url = null;
     try {
-      const txn = await initializeTransaction({ email: user.email, amount, reference, metadata });
-      authorization_url = txn.authorization_url;
-    } catch (paystackErr) {
-      logger.warn('payments.initialize: Paystack pre-init failed (inline popup will try directly)', {
-        error: paystackErr.message, reference
+      const txn = await initializeTransaction({
+        email:    user.email,
+        amount,
+        reference,
+        metadata,
+        callback_url: (process.env.CLIENT_URL || 'http://localhost:5173') + '/payment/verify',
       });
+      authorization_url = txn.authorization_url;
+      console.log('[initialize] Paystack init OK — authorization_url received');
+    } catch (paystackErr) {
+      console.warn('[initialize] Paystack pre-init failed (popup will use reference directly):', paystackErr.message);
+      logger.warn('payments.initialize: Paystack pre-init failed', { error: paystackErr.message, reference });
     }
 
     return created(res, { reference, amount, authorization_url });
   } catch (err) {
-    logger.error('payments.initialize', { error: err.message, route: req.originalUrl, userId });
+    logger.error('payments.initialize', { error: err.message });
     return serverErr(res, err, 'Payment initialization failed');
   }
 };
 
-/* ── Guest Event Payment Initialize (no login required) ── */
+/* ═══════════════════════════════════════════════════════════
+   POST /api/payments/initialize-guest  (no auth)
+══════════════════════════════════════════════════════════ */
 exports.initializeGuestEvent = async (req, res) => {
   const { guest_name, guest_email, event_id, package_id } = req.body;
 
-  if (!guest_name?.trim())                   return badReq(res, 'Your full name is required');
+  if (!guest_name?.trim())                            return badReq(res, 'Your full name is required');
   if (!guest_email || !/\S+@\S+\.\S+/.test(guest_email)) return badReq(res, 'A valid email address is required');
-  if (!event_id || !package_id)              return badReq(res, 'Event and package are required');
+  if (!event_id || !package_id)                       return badReq(res, 'Event and package are required');
 
   try {
     const [[pkg]] = await db.query(
-      'SELECT ep.*, e.title AS event_title, e.id AS event_id, e.is_published FROM event_packages ep JOIN events e ON e.id = ep.event_id WHERE ep.id = ? AND e.id = ?',
-      [package_id, event_id]);
+      `SELECT ep.*, e.title AS event_title, e.id AS event_id, e.is_published, e.deadline
+       FROM event_packages ep JOIN events e ON e.id = ep.event_id
+       WHERE ep.id = ? AND e.id = ?`,
+      [package_id, event_id]
+    );
     if (!pkg)              return badReq(res, 'Package not found');
     if (!pkg.is_published) return badReq(res, 'This event is not available');
+    if (new Date(pkg.deadline) < new Date()) return badReq(res, 'Registration deadline has passed');
 
     const earlyBirdActive = pkg.early_bird_price && new Date(pkg.early_bird_deadline) > new Date();
     const amount          = earlyBirdActive ? pkg.early_bird_price : pkg.price;
-
-    const reference = `MA-GUEST-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+    const reference       = `MA-GUEST-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
     await db.query(
       `INSERT INTO payments (user_id, guest_name, guest_email, type, item_id, amount, reference, status, metadata)
        VALUES (NULL, ?, ?, 'event', ?, ?, ?, 'pending', ?)`,
-      [guest_name.trim(), guest_email.trim().toLowerCase(), event_id, amount, reference,
-       JSON.stringify({ package_id, guest: true })]
+      [
+        guest_name.trim(),
+        guest_email.trim().toLowerCase(),
+        event_id,
+        amount,
+        reference,
+        JSON.stringify({ package_id, guest: true }),
+      ]
     );
 
-    /* Client-side PaystackPop handles the Paystack transaction directly */
+    console.log('\n[initializeGuestEvent] ✅ Guest payment record:', reference, '| amount:', amount);
+
     return created(res, { reference, amount });
   } catch (err) {
     logger.error('payments.initializeGuestEvent', { error: err.message });
-    return serverErr(res, err, `Guest event payment failed: ${err.message}`);
+    return serverErr(res, err, `Guest event payment init failed: ${err.message}`);
   }
 };
 
-/* ── Paystack Webhook ── */
-exports.webhook = async (req, res) => {
-  const signature = req.headers['x-paystack-signature'];
+/* ═══════════════════════════════════════════════════════════
+   GET  /api/payments/verify?reference=xxx   (Paystack redirect + popup callback)
+   POST /api/payments/verify                 (body: { reference })
+   — This is the CORRECT standard Paystack verify endpoint.
+   — Verifies with Paystack API first, then updates DB and sends email.
+══════════════════════════════════════════════════════════ */
+exports.verifyPayment = async (req, res) => {
+  const reference = req.query.reference || req.body.reference;
 
-  if (!verifyWebhookSignature(req.body, signature)) {
-    return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
-  }
+  console.log('\n' + '='.repeat(50));
+  console.log('[verifyPayment] ▶ reference:', reference);
 
-  const event = JSON.parse(req.body.toString());
-  res.status(200).send('OK'); // Respond to Paystack immediately
-
-  if (event.event !== 'charge.success') return;
-
-  const { reference } = event.data;
+  if (!reference) return badReq(res, 'Reference is required');
 
   try {
-    const txn = await verifyTransaction(reference);
-    if (txn.status !== 'success') return;
+    /* 1. Find payment in DB */
+    const [[payment]] = await db.query('SELECT * FROM payments WHERE reference = ?', [reference]);
+    console.log('[verifyPayment] DB lookup:', payment ? `found | status=${payment.status}` : 'NOT FOUND');
 
-    const [[payment]] = await db.query(
-      'SELECT * FROM payments WHERE reference = ?', [reference]
-    );
-    if (!payment || payment.status === 'success') return;
+    if (!payment) return notFound(res, 'Payment record not found');
 
+    if (payment.status === 'success') {
+      console.log('[verifyPayment] ✅ Already processed — returning cached result');
+      return ok(res, { message: 'Payment already processed', already: true });
+    }
+
+    /* 2. Verify with Paystack API */
+    let txn;
+    try {
+      console.log('[verifyPayment] Calling Paystack verify API...');
+      txn = await verifyTransaction(reference);
+      console.log('[verifyPayment] Paystack response → status:', txn.status, '| amount:', txn.amount, 'kobo');
+    } catch (verifyErr) {
+      console.error('[verifyPayment] ❌ Paystack verify error:', verifyErr.message);
+      logger.error('verifyPayment: Paystack API error', { error: verifyErr.message, reference });
+      return serverErr(res, verifyErr, 'Could not reach Paystack to verify payment. Please try again.');
+    }
+
+    if (txn.status !== 'success') {
+      console.warn('[verifyPayment] ⚠️  Paystack status is not success:', txn.status);
+      return badReq(res, `Payment not successful on Paystack (status: ${txn.status}). Please contact support if you were charged.`);
+    }
+
+    /* 3. Mark payment as success in DB */
     await db.query(
       'UPDATE payments SET status = ?, paid_at = ? WHERE reference = ?',
       ['success', new Date(), reference]
     );
+    console.log('[verifyPayment] ✅ DB updated → status=success');
 
-    const [[user]] = await db.query('SELECT id, name, email FROM users WHERE id = ?', [payment.user_id]);
-    /* For guests, derive name/email from payment record */
-    const recipientName  = user?.name  || payment.guest_name  || 'Valued Guest';
-    const recipientEmail = user?.email || payment.guest_email;
-    if (!recipientEmail) return; // can't send ticket without email
+    /* 4. Resolve recipient */
+    const { name: recipientName, email: recipientEmail } = await _getRecipient(payment);
+    console.log('[verifyPayment] Recipient:', recipientEmail, '| type:', payment.type);
 
-    if (payment.type === 'course') {
-      if (!payment.user_id) return; // courses require an account
-      const [[existing]] = await db.query(
-        'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
-        [payment.user_id, payment.item_id]
-      );
-      if (!existing) {
-        await db.query(
-          'INSERT INTO enrollments (user_id, course_id, payment_id) VALUES (?, ?, ?)',
-          [payment.user_id, payment.item_id, payment.id]
-        );
-        const [[course]] = await db.query('SELECT title FROM courses WHERE id = ?', [payment.item_id]);
-        await sendEnrolmentEmail({ to: recipientEmail, name: recipientName, courseName: course?.title });
-      }
-    }
-
+    /* 5. Process by type */
+    let result = {};
     if (payment.type === 'event') {
-      const meta = JSON.parse(payment.metadata || '{}');
-      /* Check for existing registration — for guests match by email; for users by user_id */
-      let existing;
-      if (payment.user_id) {
-        [[existing]] = await db.query(
-          'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
-          [payment.user_id, payment.item_id]);
-      } else {
-        [[existing]] = await db.query(
-          'SELECT id FROM event_registrations WHERE guest_email = ? AND event_id = ?',
-          [payment.guest_email, payment.item_id]);
-      }
-
-      if (!existing) {
-        const ticketCode = generateTicketCode();
-        const [[pkg]]   = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id]);
-        const [[ev]]    = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
-
-        await db.query(
-          `INSERT INTO event_registrations
-           (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [payment.user_id || null, payment.guest_name, payment.guest_email,
-           payment.item_id, meta.package_id, payment.id, ticketCode]
-        );
-
-        await sendEventTicketEmail({
-          to: recipientEmail, name: recipientName,
-          event: ev, pkg, packageName: pkg?.name || 'Standard',
-          ticketCode
-        });
-
-        await sendPaymentReceiptEmail({
-          to: recipientEmail, name: recipientName,
-          amount: payment.amount, reference,
-          description: `Event registration: ${ev?.title}`
-        });
-      }
+      result = await _processEvent(payment, reference, recipientName, recipientEmail);
+    } else if (payment.type === 'course') {
+      result = await _processCourse(payment, reference, recipientName, recipientEmail);
     }
+
+    console.log('[verifyPayment] ✅ Done:', result.message);
+    console.log('='.repeat(50) + '\n');
+
+    return ok(res, { message: result.message || 'Payment verified', ...result });
   } catch (err) {
-    logger.error('webhook processing failed', { error: err.message, reference });
-    // Persist to error_logs
-    try { await db.query('INSERT INTO error_logs (route, message, stack) VALUES (?,?,?)', ['/api/payments/webhook', `Webhook failed [${reference}]: ${err.message}`, err.stack || '']); } catch(_){}
+    console.error('[verifyPayment] ❌ Unexpected error:', err.message);
+    logger.error('verifyPayment error', { error: err.message, reference });
+    return serverErr(res, err, 'Payment verification failed');
   }
 };
 
-/* ── Admin: all payments ── */
+/* ═══════════════════════════════════════════════════════════
+   POST /api/payments/confirm        (backward compat — delegates to verifyPayment)
+   POST /api/payments/confirm-guest  (backward compat)
+══════════════════════════════════════════════════════════ */
+exports.confirmPayment      = exports.verifyPayment;
+exports.confirmGuestPayment = exports.verifyPayment;
+
+/* ═══════════════════════════════════════════════════════════
+   POST /api/payments/webhook   (Paystack → server, server-side safety net)
+══════════════════════════════════════════════════════════ */
+exports.webhook = async (req, res) => {
+  const signature = req.headers['x-paystack-signature'];
+
+  if (!verifyWebhookSignature(req.body, signature)) {
+    console.warn('[webhook] ❌ Invalid signature');
+    return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
+  }
+
+  const event = JSON.parse(req.body.toString());
+  res.status(200).send('OK'); // respond to Paystack immediately — never delay this
+
+  if (event.event !== 'charge.success') return;
+
+  const { reference } = event.data;
+  console.log('\n[webhook] charge.success received for reference:', reference);
+
+  try {
+    const txn = await verifyTransaction(reference);
+    if (txn.status !== 'success') {
+      console.warn('[webhook] Paystack status not success:', txn.status);
+      return;
+    }
+
+    const [[payment]] = await db.query('SELECT * FROM payments WHERE reference = ?', [reference]);
+    if (!payment) { console.warn('[webhook] payment not found:', reference); return; }
+    if (payment.status === 'success') { console.log('[webhook] already processed:', reference); return; }
+
+    await db.query('UPDATE payments SET status = ?, paid_at = ? WHERE reference = ?',
+      ['success', new Date(), reference]);
+    console.log('[webhook] ✅ DB updated for:', reference);
+
+    const { name: recipientName, email: recipientEmail } = await _getRecipient(payment);
+
+    if (payment.type === 'event') {
+      await _processEvent(payment, reference, recipientName, recipientEmail);
+    } else if (payment.type === 'course') {
+      await _processCourse(payment, reference, recipientName, recipientEmail);
+    }
+
+    console.log('[webhook] ✅ Processing complete for:', reference);
+  } catch (err) {
+    console.error('[webhook] ❌ Error:', err.message);
+    logger.error('webhook processing failed', { error: err.message, reference });
+    try {
+      await db.query(
+        'INSERT INTO error_logs (route, message, stack) VALUES (?,?,?)',
+        ['/api/payments/webhook', `Webhook failed [${reference}]: ${err.message}`, err.stack || '']
+      );
+    } catch (_) {}
+  }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   GET  /api/payments/       (admin — all payments)
+   GET  /api/payments/my     (auth user — own payments)
+══════════════════════════════════════════════════════════ */
 exports.getAll = async (req, res) => {
   const { page, perPage, offset, limit } = paginate(req.query);
   const { type, status } = req.query;
-  const conditions = [];
-  const vals = [];
+  const conditions = [], vals = [];
   if (type)   { conditions.push('p.type = ?');   vals.push(type); }
   if (status) { conditions.push('p.status = ?'); vals.push(status); }
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
@@ -239,148 +454,7 @@ exports.getMine = async (req, res) => {
       [req.user.id]
     );
     return ok(res, rows);
-  } catch (err) { return serverErr(res, err, 'Server error');
+  } catch (err) {
+    return serverErr(res, err, 'Server error');
   }
-};
-
-/* ── Confirm payment from frontend callback (works without webhook) ──
- * Called client-side after Paystack popup reports success.
- * Processes the payment: updates status, creates enrollment/registration, sends emails.
- * The webhook does the same thing server-side — this ensures local dev works too.
- */
-exports.confirmPayment = async (req, res) => {
-  const { reference } = req.body;
-  if (!reference) return badReq(res, 'Reference required');
-
-  try {
-    const [[payment]] = await db.query(
-      'SELECT * FROM payments WHERE reference = ?', [reference]
-    );
-    if (!payment)                    return notFound(res, 'Payment not found');
-    if (payment.status === 'success') return ok(res, { message: 'Already processed', already: true });
-
-    /* Mark payment successful immediately — client already received Paystack success callback.
-     * We use JS Date() instead of MySQL NOW() to avoid server timezone drift. */
-    await db.query(
-      'UPDATE payments SET status = ?, paid_at = ? WHERE reference = ?',
-      ['success', new Date(), reference]
-    );
-
-    /* Optional Paystack server-side verify — logs discrepancies but never blocks processing */
-    const sk = process.env.PAYSTACK_SECRET_KEY;
-    if (sk && !sk.includes('xxxx')) {
-      try {
-        const txn = await verifyTransaction(reference);
-        if (txn.status !== 'success') {
-          logger.warn('confirmPayment: Paystack returned non-success — payment already marked success from client callback', {
-            paystackStatus: txn.status, reference
-          });
-        }
-      } catch (verifyErr) {
-        logger.warn('confirmPayment: Paystack verify threw (client callback trusted)', { error: verifyErr.message, reference });
-      }
-    }
-
-    /* Resolve recipient — for logged-in users pull from users table */
-    let recipientName  = payment.guest_name  || 'Valued Guest';
-    let recipientEmail = payment.guest_email || null;
-    if (payment.user_id) {
-      const [[u]] = await db.query('SELECT name, email FROM users WHERE id = ?', [payment.user_id]);
-      if (u) { recipientName = u.name; recipientEmail = u.email; }
-    }
-
-    /* Process based on payment type */
-    if (payment.type === 'event') {
-      const meta = JSON.parse(payment.metadata || '{}');
-      let existing;
-      if (payment.user_id) {
-        [[existing]] = await db.query(
-          'SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?',
-          [payment.user_id, payment.item_id]);
-      } else {
-        [[existing]] = await db.query(
-          'SELECT id FROM event_registrations WHERE guest_email = ? AND event_id = ?',
-          [payment.guest_email, payment.item_id]);
-      }
-
-      if (!existing) {
-        const ticketCode = generateTicketCode();
-        const [[pkg]] = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id]);
-        const [[ev]]  = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
-
-        try {
-          await db.query(
-            `INSERT INTO event_registrations (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [payment.user_id || null, payment.guest_name || recipientName, payment.guest_email || recipientEmail,
-             payment.item_id, meta.package_id, payment.id, ticketCode]
-          );
-        } catch (regErr) {
-          logger.error('confirmPayment: event_registrations INSERT failed', { error: regErr.message, reference });
-          /* Payment is already success — return ok so client doesn't retry */
-          return ok(res, { message: 'Payment confirmed — registration will be processed shortly', ticketCode, event: ev?.title });
-        }
-
-        /* Send ticket + receipt — track actual delivery status for honest response */
-        let emailSent = false;
-        if (recipientEmail) {
-          try {
-            await sendEventTicketEmail({
-              to: recipientEmail, name: recipientName,
-              event: ev, pkg, packageName: pkg?.name || 'Standard',
-              ticketCode
-            });
-            emailSent = true;
-          } catch (emailErr) {
-            logger.warn('confirmPayment: ticket email failed', { error: emailErr.message, reference });
-          }
-
-          sendPaymentReceiptEmail({
-            to: recipientEmail, name: recipientName,
-            amount: payment.amount, reference,
-            description: `Event registration: ${ev?.title}`
-          }).catch(e => logger.warn('receipt email failed', { error: e.message }));
-        }
-
-        return ok(res, {
-          message:   'Registration confirmed',
-          ticketCode,
-          event:     ev?.title,
-          emailSent,
-          emailNote: emailSent
-            ? `Ticket sent to ${recipientEmail}`
-            : `Registration saved — ticket email could not be delivered to ${recipientEmail}. Please contact support.`
-        });
-      }
-    }
-
-    if (payment.type === 'course' && payment.user_id) {
-      const [[existing]] = await db.query(
-        'SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?',
-        [payment.user_id, payment.item_id]);
-      if (!existing) {
-        await db.query('INSERT INTO enrollments (user_id, course_id, payment_id) VALUES (?, ?, ?)',
-          [payment.user_id, payment.item_id, payment.id]);
-        const [[course]] = await db.query('SELECT title FROM courses WHERE id=?', [payment.item_id]);
-        const [[u]] = await db.query('SELECT name, email FROM users WHERE id=?', [payment.user_id]);
-        if (u) {
-          const { sendEnrolmentEmail } = require('../services/email.service');
-          sendEnrolmentEmail({ to: u.email, name: u.name, courseName: course?.title })
-            .catch(e => logger.warn('enrolment email failed', { error: e.message }));
-        }
-        return ok(res, { message: 'Enrolled successfully', course: course?.title });
-      }
-    }
-
-    return ok(res, { message: 'Payment confirmed' });
-  } catch (err) { return serverErr(res, err, 'Payment confirmation failed'); }
-};
-
-/* Guest confirm — no auth, uses reference + email to verify */
-exports.confirmGuestPayment = async (req, res) => {
-  const { reference, guest_email } = req.body;
-  if (!reference) return badReq(res, 'Reference required');
-  // Temporarily add user info to req so confirmPayment can use it
-  req.body.reference = reference;
-  return exports.confirmPayment(req, res);
 };
