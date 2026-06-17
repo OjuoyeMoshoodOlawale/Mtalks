@@ -295,16 +295,25 @@ exports.forgotPassword = async (req, res) => {
 /* ── Reset Password ── */
 exports.resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
+
+  /* Validate inputs */
+  if (!email?.trim())     return badReq(res, 'Email is required');
+  if (!otp?.trim())       return badReq(res, 'Reset code is required');
+  if (!newPassword)       return badReq(res, 'New password is required');
+  if (newPassword.length < 8) return badReq(res, 'Password must be at least 8 characters');
+
+  const cleanEmail = email.toLowerCase().trim();
+
   try {
-    const [users] = await db.query('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
+    const [users] = await db.query('SELECT id FROM users WHERE email = ?', [cleanEmail]);
     if (!users.length) return badReq(res, 'Account not found');
 
     const userId = users[0].id;
     const [tokens] = await db.query(
       'SELECT * FROM otp_tokens WHERE user_id = ? AND token = ? AND type = ? AND used = 0',
-      [userId, otp, 'reset_password']
+      [userId, otp.trim(), 'reset_password']
     );
-    if (!tokens.length) return badReq(res, 'Invalid reset code');
+    if (!tokens.length) return badReq(res, 'Invalid reset code — please check the code and try again');
     if (new Date(tokens[0].expires_at) < new Date())
       return badReq(res, 'Reset code has expired — please request a new one');
 
@@ -312,6 +321,7 @@ exports.resetPassword = async (req, res) => {
     await db.query('UPDATE users SET password = ? WHERE id = ?', [hash, userId]);
     await db.query('UPDATE otp_tokens SET used = 1 WHERE id = ?', [tokens[0].id]);
 
+    console.log('[resetPassword] ✅ password reset for:', cleanEmail);
     return ok(res, { message: 'Password reset successfully. You can now log in.' });
   } catch (err) {
     logger.error('resetPassword error', { error: err.message });
