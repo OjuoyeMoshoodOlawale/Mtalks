@@ -3,7 +3,21 @@
  * Sends via cPanel SMTP; auto-falls back to Gmail if cPanel is down.
  */
 const mailer   = require('../config/mailer');
+const db       = require('../config/db');
 const { generateQrDataUrl } = require('./ticket.service');
+
+/**
+ * logEmail — writes a record to email_logs for audit/debugging.
+ * Fails silently so a logging error never crashes an email send.
+ */
+const logEmail = async ({ to, subject, type, status, error = null }) => {
+  try {
+    await db.query(
+      'INSERT INTO email_logs (recipient, subject, type, status, error_message, sent_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [to, subject, type, status, error, new Date()]
+    );
+  } catch (_) { /* non-blocking */ }
+};
 
 const BRAND    = 'Muhsinah Academy';
 const SITE_URL = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
@@ -237,7 +251,7 @@ async function sendContactNotification ({ name, email, subject, message }) {
   // Fallback = GMAIL_USER (the sending account) if settings not available
   let recipientEmail = process.env.SMTP_USER || process.env.GMAIL_USER;
   try {
-    const db = require('../config/db');
+
     const [[row]] = await db.query("SELECT `value` FROM settings WHERE `key` = 'site_email'");
     if (row?.value) recipientEmail = row.value;
   } catch { /* use fallback */ }
