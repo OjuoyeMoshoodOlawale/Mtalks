@@ -1,15 +1,17 @@
 /**
  * Email Service — Muhsinah Academy
- * Uses Gmail SMTP via Nodemailer (free)
+ * Sends via cPanel SMTP; auto-falls back to Gmail if cPanel is down.
  */
-const transporter = require('../config/mailer');
+const mailer   = require('../config/mailer');
 const { generateQrDataUrl } = require('./ticket.service');
 
-const BRAND      = 'Muhsinah Academy';
-const SITE_URL   = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
-/* MAIL_FROM must match GMAIL_USER exactly — Gmail rejects mismatched senders */
-const SENDER_EMAIL = (process.env.SMTP_USER || process.env.GMAIL_USER || 'noreply@muhsinahacademy.com').trim();
-const MAIL_FROM    = `Muhsinah Academy <${SENDER_EMAIL}>`; // built dynamically from SMTP config
+const BRAND    = 'Muhsinah Academy';
+const SITE_URL = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
+
+/* MAIL_FROM is resolved at send-time so it always matches whichever transport
+ * is active. Gmail rejects emails where From: doesn't match the auth sender. */
+const getMailFrom = () =>
+  `Muhsinah Academy <${mailer.getActiveUser() || 'noreply@themuhsinahacademy.com'}>`;
 
 const GREEN_DARK = '#0D3B15';
 const GREEN      = '#1D6B1D';
@@ -58,7 +60,7 @@ const base = (content) => `
 const sendOtpEmail = async ({ to, name, otp, type }) => {
   const isVerify = type === 'verify_email';
   const mail = {
-    from: MAIL_FROM, to,
+    from: getMailFrom(), to,
     subject: isVerify ? `Verify your email — ${BRAND}` : `Reset your password — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -71,7 +73,7 @@ const sendOtpEmail = async ({ to, name, otp, type }) => {
     `)
   };
   try {
-    await transporter.sendMail(mail);
+    await mailer.sendMail(mail);
     await logEmail({ to, subject: mail.subject, type: 'otp', status: 'sent' });
   } catch (err) {
     await logEmail({ to, subject: mail.subject, type: 'otp', status: 'failed', error: err.message });
@@ -82,7 +84,7 @@ const sendOtpEmail = async ({ to, name, otp, type }) => {
 /** Welcome after successful registration */
 const sendWelcomeEmail = async ({ to, name }) => {
   const mail = {
-    from: MAIL_FROM, to,
+    from: getMailFrom(), to,
     subject: `Welcome to ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -93,7 +95,7 @@ const sendWelcomeEmail = async ({ to, name }) => {
     `)
   };
   try {
-    await transporter.sendMail(mail);
+    await mailer.sendMail(mail);
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
@@ -104,7 +106,7 @@ const sendWelcomeEmail = async ({ to, name }) => {
 /** Course enrolment */
 const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   const mail = {
-    from: MAIL_FROM, to,
+    from: getMailFrom(), to,
     subject: `Enrolled: ${courseName} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -118,7 +120,7 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
     `)
   };
   try {
-    await transporter.sendMail(mail);
+    await mailer.sendMail(mail);
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
@@ -161,7 +163,7 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
     </div>` : '';
 
   const mail = {
-    from: MAIL_FROM, to,
+    from: getMailFrom(), to,
     subject: `Your Ticket: ${event.title} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -193,7 +195,7 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
     `)
   };
   try {
-    await transporter.sendMail(mail);
+    await mailer.sendMail(mail);
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
@@ -204,7 +206,7 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
 /** Payment receipt */
 const sendPaymentReceiptEmail = async ({ to, name, amount, reference, description }) => {
   const mail = {
-    from: MAIL_FROM, to,
+    from: getMailFrom(), to,
     subject: `Payment Receipt — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -219,7 +221,7 @@ const sendPaymentReceiptEmail = async ({ to, name, amount, reference, descriptio
     `)
   };
   try {
-    await transporter.sendMail(mail);
+    await mailer.sendMail(mail);
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
@@ -242,7 +244,7 @@ async function sendContactNotification ({ name, email, subject, message }) {
 
   if (!recipientEmail) return;
   const mail = {
-    from:    MAIL_FROM,
+    from:    getMailFrom(),
     to:      recipientEmail,
     replyTo: email,
     subject: `[Muhsinah Academy] New Message: ${subject}`,
@@ -262,7 +264,7 @@ async function sendContactNotification ({ name, email, subject, message }) {
     `)
   };
   try {
-    await transporter.sendMail(mail);
+    await mailer.sendMail(mail);
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
     await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
