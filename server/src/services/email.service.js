@@ -126,7 +126,7 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   }
 };
 
-/** Event ticket with QR code and WhatsApp link */
+/** Event ticket with QR code, WhatsApp link and full event details */
 const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, whatsappLink }) => {
   const qrDataUrl = await generateQrDataUrl(ticketCode);
   const dateStr   = new Date(event.event_date).toLocaleDateString('en-NG', {
@@ -134,9 +134,24 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
   });
   const timeStr = new Date(event.event_date).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
 
-  const locationHtml = event.type === 'offline'
-    ? `<div class="info"><span class="label">Venue</span><span> ${event.venue}</span></div>`
-    : `<div class="info"><span class="label">Format</span><span> Online — link in this email</span></div>`;
+  const isOnline = event.type === 'online';
+
+  const locationHtml = isOnline
+    ? `<div class="info"><span class="label">Format</span><span>🌐 Online (join link below)</span></div>`
+    : `<div class="info"><span class="label">Venue</span><span>📍 ${event.venue || 'TBA'}</span></div>`;
+
+  const onlineLinkSection = (isOnline && event.online_link) ? `
+    <div style="background:#EBF7DC;border-left:4px solid ${GREEN};border-radius:8px;padding:16px;margin:20px 0">
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK}">Online Join Link</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">Click the button below at event time to join. Please do not share this link.</p>
+      <div style="text-align:center"><a href="${event.online_link}" class="btn" style="background:${GREEN}">Join Event</a></div>
+    </div>` : '';
+
+  const descriptionSection = event.description ? `
+    <div style="margin:20px 0;padding:16px;background:#F9FBF6;border-radius:8px;border:1px solid #D4E8C4">
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">About This Event</p>
+      <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.6;white-space:pre-line">${event.description}</p>
+    </div>` : '';
 
   const whatsappSection = whatsappLink ? `
     <div class="whatsapp-box">
@@ -150,19 +165,31 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
     subject: `Your Ticket: ${event.title} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Your registration is confirmed! Here is your ticket:</p>
+      <p>Your registration is confirmed! Here is your ticket for <strong>${event.title}</strong>:</p>
+
       <div class="ticket">
         <span class="gold-badge">${packageName}</span>
         <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-        <div class="info" style="justify-content:center"><span> ${dateStr}</span></div>
-        <div class="info" style="justify-content:center"><span> ${timeStr}</span></div>
+        <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
+        <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
         ${locationHtml}
         <img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>
         <div class="ticket-code">${ticketCode}</div>
-        <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code at the event entrance</p>
+        <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code or ticket code at the entrance</p>
       </div>
+
+      ${descriptionSection}
+      ${onlineLinkSection}
       ${whatsappSection}
-      <p>We look forward to seeing you. Barakallahu feekum. </p>
+
+      <div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:14px 16px;margin:20px 0">
+        <p style="margin:0;font-size:13px;color:#5C4500"><strong>📌 Reminder:</strong> Please arrive 10–15 minutes early. Bring this email or your ticket code for check-in.</p>
+      </div>
+
+      <p>We look forward to seeing you. Barakallahu feekum. 🌿</p>
+      <div style="text-align:center;margin-top:16px">
+        <a href="${SITE_URL}/events" class="btn">View All Events</a>
+      </div>
     `)
   };
   try {

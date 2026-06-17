@@ -79,10 +79,12 @@ exports.verifyEmail = async (req, res) => {
 
     const userId = users[0].id;
     const [tokens] = await db.query(
-      'SELECT * FROM otp_tokens WHERE user_id = ? AND token = ? AND type = ? AND used = 0 AND expires_at > NOW()',
+      'SELECT * FROM otp_tokens WHERE user_id = ? AND token = ? AND type = ? AND used = 0',
       [userId, otp, 'verify_email']
     );
-    if (!tokens.length) return badReq(res, 'Invalid or expired verification code');
+    if (!tokens.length) return badReq(res, 'Invalid verification code');
+    if (new Date(tokens[0].expires_at) < new Date())
+      return badReq(res, 'Verification code has expired — please request a new one');
 
     await db.query('UPDATE users SET is_verified = 1 WHERE id = ?', [userId]);
     await db.query('UPDATE otp_tokens SET used = 1 WHERE id = ?', [tokens[0].id]);
@@ -229,10 +231,12 @@ exports.resetPassword = async (req, res) => {
 
     const userId = users[0].id;
     const [tokens] = await db.query(
-      'SELECT * FROM otp_tokens WHERE user_id = ? AND token = ? AND type = ? AND used = 0 AND expires_at > NOW()',
+      'SELECT * FROM otp_tokens WHERE user_id = ? AND token = ? AND type = ? AND used = 0',
       [userId, otp, 'reset_password']
     );
-    if (!tokens.length) return badReq(res, 'Invalid or expired reset code');
+    if (!tokens.length) return badReq(res, 'Invalid reset code');
+    if (new Date(tokens[0].expires_at) < new Date())
+      return badReq(res, 'Reset code has expired — please request a new one');
 
     const hash = await bcrypt.hash(newPassword, 12);
     await db.query('UPDATE users SET password = ? WHERE id = ?', [hash, userId]);
