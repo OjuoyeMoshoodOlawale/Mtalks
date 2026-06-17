@@ -141,10 +141,25 @@ const pay = async () => {
       amountNaira:      pkgPrice(selPkg.value),
       reference,
       authorizationUrl: authorization_url,
-      onSuccess: async () => {
-        ui.toast('Payment confirmed! Your ticket has been sent to your email.')
-        const res = await api.get(`/events/${route.params.slug}`)
-        event.value = res.data.data
+      onSuccess: async (paystackResponse) => {
+        /* Paystack popup closed with success — now verify server-side */
+        const ref = paystackResponse?.reference || reference
+        console.log('[onSuccess] Paystack callback received | ref:', ref)
+        ui.toast('Verifying payment...')
+        try {
+          const { data } = await api.post('/payments/verify', { reference: ref })
+          console.log('[onSuccess] Server verify response:', data)
+          if (data.emailSent) {
+            ui.toast(`Registration confirmed! 🎉 Ticket sent to your email.`)
+          } else {
+            ui.toast(`Registration confirmed! ${data.emailNote || 'Check your spam or contact support if no email arrives.'}`)
+          }
+          const reload = await api.get(`/events/${route.params.slug}`)
+          event.value = reload.data.data
+        } catch (err) {
+          console.error('[onSuccess] Server verify failed:', err)
+          ui.toastError(err.response?.data?.message || 'Payment received but verification failed. Please contact support with your reference: ' + ref)
+        }
       },
       onCancel: () => { ui.toastError('Payment was cancelled.') }
     })
@@ -175,11 +190,25 @@ const payAsGuest = async () => {
       amountNaira:      pkgPrice(selPkg.value),
       reference,
       authorizationUrl: authorization_url,
-      onSuccess: async () => {
-        ui.toast('Payment confirmed! Your ticket has been sent to ' + guestEmail.value)
-        const res = await api.get(`/events/${route.params.slug}`)
-        event.value = res.data.data
-        guestMode.value = false
+      onSuccess: async (paystackResponse) => {
+        const ref = paystackResponse?.reference || reference
+        console.log('[onSuccess-guest] Paystack callback | ref:', ref)
+        ui.toast('Verifying payment...')
+        try {
+          const { data } = await api.post('/payments/verify', { reference: ref })
+          console.log('[onSuccess-guest] Server verify response:', data)
+          if (data.emailSent) {
+            ui.toast(`Registration confirmed! 🎉 Ticket sent to ${guestEmail.value}`)
+          } else {
+            ui.toast(`Registration confirmed! ${data.emailNote || 'Check your spam or contact support if no email arrives.'}`)
+          }
+          const reload = await api.get(`/events/${route.params.slug}`)
+          event.value = reload.data.data
+          guestMode.value = false
+        } catch (err) {
+          console.error('[onSuccess-guest] verify failed:', err)
+          ui.toastError(err.response?.data?.message || 'Payment received but verification failed. Please contact support with reference: ' + ref)
+        }
       },
       onCancel: () => { ui.toastError('Payment was cancelled.') }
     })

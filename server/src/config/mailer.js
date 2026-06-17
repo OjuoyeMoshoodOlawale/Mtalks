@@ -22,9 +22,16 @@ const SMTP_PORT = 465;
 const SMTP_USER = 'noreply@themuhsinahacademy.com';
 const SMTP_PASS = 'REPLACE_WITH_EMAIL_PASSWORD'; // ← cPanel email account password
 
-/* ── Gmail fallback constants ── */
-const GMAIL_USER = process.env.GMAIL_USER         || '';
-const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD || '';
+/* ── Gmail fallback constants — hardcoded while .env is being fixed ──
+ * To get a Gmail App Password:
+ *   1. Enable 2FA on the Google account
+ *   2. Go to myaccount.google.com/apppasswords
+ *   3. Create an app password for "Mail"
+ *   4. Paste the 16-char password below (no spaces)
+ * Swap to process.env.X once .env is confirmed working.
+ */
+const GMAIL_USER = 'REPLACE_WITH_GMAIL_ADDRESS';   // e.g. themuhsinahacademy@gmail.com
+const GMAIL_PASS = 'REPLACE_WITH_GMAIL_APP_PASSWORD'; // 16-char app password from Google
 
 /* ── Build transporters ── */
 const cpanelTransporter = nodemailer.createTransport({
