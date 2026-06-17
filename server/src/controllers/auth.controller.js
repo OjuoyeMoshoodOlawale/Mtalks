@@ -91,7 +91,9 @@ exports.verifyEmail = async (req, res) => {
 
     const [updatedUser] = await db.query('SELECT id, name, email, role FROM users WHERE id = ?', [userId]);
     const user = updatedUser[0];
-    await sendWelcomeEmail({ to: user.email, name: user.name });
+    /* Non-blocking — welcome email must never crash a successful verification */
+    sendWelcomeEmail({ to: user.email, name: user.name })
+      .catch(e => logger.warn('verifyEmail: welcome email failed — ' + e.message));
 
     const accessToken  = signAccess({ id: user.id, role: user.role });
     const refreshToken = signRefresh({ id: user.id, role: user.role });
