@@ -116,7 +116,33 @@ exports.login = async (req, res) => {
 
     const user = users[0];
     if (!user.is_active)   return unauth(res, 'Account has been disabled. Contact support.');
-    if (!user.is_verified) return unauth(res, 'Please verify your email before logging in.');
+    if (!user.is_verified) {
+      /* Auto-resend OTP so user doesn't have to hunt for the resend button */
+      try {
+        const otp       = genOtp();
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+        await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [user.id, 'verify_email']);
+        await db.query(
+          'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+          [user.id, otp, 'verify_email', expiresAt]
+        );
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('\n' + '='.repeat(44));
+          console.log('  OTP (login — unverified) — ' + user.email);
+          console.log('  Code: ' + otp + '   (expires 30 min)');
+          console.log('='.repeat(44) + '\n');
+        }
+        sendOtpEmail({ to: user.email, name: user.name, otp, type: 'verify_email' }).catch(() => {});
+      } catch (_) { /* non-blocking */ }
+
+      /* Return 403 with machine-readable flag — frontend redirects to OTP screen */
+      return res.status(403).json({
+        success:          false,
+        needsVerification: true,
+        email:            user.email,
+        message:          'Your email is not verified. A new code has been sent to ' + user.email + '.'
+      });
+    }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return unauth(res, 'Invalid email or password');
@@ -200,20 +226,41 @@ exports.resendOtp = async (req, res) => {
 /* ── Forgot Password ── */
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
+  if (!email || !EMAIL_RX.test(email.trim()))
+    return badReq(res, 'Please enter a valid email address');
+
+  const cleanEmail = email.toLowerCase().trim();
+
   try {
-    const [users] = await db.query('SELECT id, name FROM users WHERE email = ?', [email.toLowerCase()]);
-    // Always return success to avoid user enumeration
+    const [users] = await db.query('SELECT id, name FROM users WHERE email = ?', [cleanEmail]);
+    /* Always return success — prevents user enumeration */
     if (!users.length) return ok(res, { message: 'If that email exists, a reset code was sent.' });
 
     const { id, name } = users[0];
     const otp       = genOtp();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
+    /* Clear any previous unused reset tokens — only one active at a time */
+    await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [id, 'reset_password']);
     await db.query(
       'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
       [id, otp, 'reset_password', expiresAt]
     );
-    await sendOtpEmail({ to: email, name, otp, type: 'reset_password' });
+
+    /* Always log in dev — mailer may not be working yet */
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n' + '='.repeat(44));
+      console.log('  RESET OTP — ' + cleanEmail);
+      console.log('  Code: ' + otp + '   (expires 30 min)');
+      console.log('='.repeat(44) + '\n');
+    }
+
+    /* Non-blocking email — OTP is already in DB; mailer failure must not return 500 */
+    try {
+      await sendOtpEmail({ to: cleanEmail, name, otp, type: 'reset_password' });
+    } catch (mailErr) {
+      logger.warn('forgotPassword: email failed — ' + mailErr.message + ' (OTP saved to DB)');
+    }
 
     return ok(res, { message: 'If that email exists, a reset code was sent.' });
   } catch (err) {
