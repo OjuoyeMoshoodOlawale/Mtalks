@@ -188,8 +188,8 @@ exports.webhook = async (req, res) => {
 
         await sendEventTicketEmail({
           to: recipientEmail, name: recipientName,
-          event: ev, packageName: pkg?.name || 'Standard',
-          ticketCode, whatsappLink: ev?.whatsapp_link || null
+          event: ev, pkg, packageName: pkg?.name || 'Standard',
+          ticketCode
         });
 
         await sendPaymentReceiptEmail({
@@ -304,24 +304,28 @@ exports.confirmPayment = async (req, res) => {
       }
 
       if (!existing) {
-        const { generateTicketCode } = require('../services/ticket.service');
         const ticketCode = generateTicketCode();
         const [[pkg]] = await db.query('SELECT * FROM event_packages WHERE id = ?', [meta.package_id]);
         const [[ev]]  = await db.query('SELECT * FROM events WHERE id = ?', [payment.item_id]);
 
-        await db.query(
-          `INSERT INTO event_registrations (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [payment.user_id || null, payment.guest_name || recipientName, payment.guest_email || recipientEmail,
-           payment.item_id, meta.package_id, payment.id, ticketCode]
-        );
+        try {
+          await db.query(
+            `INSERT INTO event_registrations (user_id, guest_name, guest_email, event_id, package_id, payment_id, ticket_code)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [payment.user_id || null, payment.guest_name || recipientName, payment.guest_email || recipientEmail,
+             payment.item_id, meta.package_id, payment.id, ticketCode]
+          );
+        } catch (regErr) {
+          logger.error('confirmPayment: event_registrations INSERT failed', { error: regErr.message, reference });
+          /* Payment is already success — return ok so client doesn't retry */
+          return ok(res, { message: 'Payment confirmed — registration will be processed shortly', ticketCode, event: ev?.title });
+        }
 
         if (recipientEmail) {
-          const { sendEventTicketEmail, sendPaymentReceiptEmail } = require('../services/email.service');
           sendEventTicketEmail({
             to: recipientEmail, name: recipientName,
-            event: ev, packageName: pkg?.name || 'Standard',
-            ticketCode, whatsappLink: ev?.whatsapp_link || null
+            event: ev, pkg, packageName: pkg?.name || 'Standard',
+            ticketCode
           }).catch(e => logger.warn('ticket email failed', { error: e.message }));
 
           sendPaymentReceiptEmail({

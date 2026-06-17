@@ -142,38 +142,72 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   }
 };
 
-/** Event ticket with QR code, WhatsApp link and full event details */
-const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, whatsappLink }) => {
-  const qrDataUrl = await generateQrDataUrl(ticketCode);
-  const dateStr   = new Date(event.event_date).toLocaleDateString('en-NG', {
+/** Event ticket — full details: QR code, meeting link, WhatsApp, package perks, description */
+const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketCode }) => {
+  const qrDataUrl  = await generateQrDataUrl(ticketCode);
+  const whatsapp   = event.whatsapp_link  || null;
+  const meetLink   = event.meeting_link   || null;   // DB column = meeting_link (not online_link)
+  const isOnline   = event.type === 'online';
+
+  const dateStr = new Date(event.event_date).toLocaleDateString('en-NG', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
-  const timeStr = new Date(event.event_date).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = new Date(event.event_date).toLocaleTimeString('en-NG', {
+    hour: '2-digit', minute: '2-digit'
+  });
 
-  const isOnline = event.type === 'online';
-
+  /* ── Location row ── */
   const locationHtml = isOnline
-    ? `<div class="info"><span class="label">Format</span><span>🌐 Online (join link below)</span></div>`
+    ? `<div class="info"><span class="label">Format</span><span>🌐 Online — join link included below</span></div>`
     : `<div class="info"><span class="label">Venue</span><span>📍 ${event.venue || 'TBA'}</span></div>`;
 
-  const onlineLinkSection = (isOnline && event.online_link) ? `
+  /* ── Online meeting link section ── */
+  const meetingSection = (isOnline && meetLink) ? `
     <div style="background:#EBF7DC;border-left:4px solid ${GREEN};border-radius:8px;padding:16px;margin:20px 0">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK}">Online Join Link</p>
-      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">Click the button below at event time to join. Please do not share this link.</p>
-      <div style="text-align:center"><a href="${event.online_link}" class="btn" style="background:${GREEN}">Join Event</a></div>
+      <p style="margin:0 0 6px;font-weight:700;color:${GREEN_DARK}">🔗 Online Join Link</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
+        Click the button below at event time. Do not share this link — it is unique to your registration.
+      </p>
+      <div style="text-align:center">
+        <a href="${meetLink}" style="display:inline-block;background:${GREEN};color:#fff;padding:10px 28px;border-radius:6px;text-decoration:none;font-weight:700;">
+          Join Event
+        </a>
+      </div>
     </div>` : '';
 
-  const descriptionSection = event.description ? `
+  /* ── Event description ── */
+  const descSection = event.description ? `
     <div style="margin:20px 0;padding:16px;background:#F9FBF6;border-radius:8px;border:1px solid #D4E8C4">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">About This Event</p>
-      <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.6;white-space:pre-line">${event.description}</p>
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">📋 About This Event</p>
+      <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.7;white-space:pre-line">${event.description}</p>
     </div>` : '';
 
-  const whatsappSection = whatsappLink ? `
+  /* ── Package perks ── */
+  let perksHtml = '';
+  const pkgDesc  = pkg?.description || null;
+  const pkgPerks = (() => { try { return pkg?.perks ? JSON.parse(pkg.perks) : null; } catch { return null; } })();
+  if (pkgDesc || (Array.isArray(pkgPerks) && pkgPerks.length)) {
+    const perkItems = Array.isArray(pkgPerks)
+      ? pkgPerks.map(p => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D">✅ ${p}</li>`).join('')
+      : '';
+    perksHtml = `
+    <div style="margin:20px 0;padding:16px;background:#FFFDF0;border-radius:8px;border:1px solid #F0E0A0">
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">🎁 What's Included (${packageName})</p>
+      ${pkgDesc ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkgDesc}</p>` : ''}
+      ${perkItems ? `<ul style="margin:0;padding-left:16px">${perkItems}</ul>` : ''}
+    </div>`;
+  }
+
+  /* ── WhatsApp group ── */
+  const whatsappSection = whatsapp ? `
     <div class="whatsapp-box">
-      <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">Join the Private WhatsApp Group</p>
-      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">This link is exclusively for registered participants. Please do not share it publicly.</p>
-      <div style="text-align:center"><a href="${whatsappLink}" class="whatsapp-btn">Join WhatsApp Group</a></div>
+      <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">💬 Join the Private WhatsApp Group</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
+        This link is exclusively for registered participants. Please do not share it publicly.
+      </p>
+      <div style="text-align:center">
+        <a href="${whatsapp}" class="whatsapp-btn">Join WhatsApp Group</a>
+      </div>
     </div>` : '';
 
   const mail = {
@@ -181,7 +215,7 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
     subject: `Your Ticket: ${event.title} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Your registration is confirmed! Here is your ticket for <strong>${event.title}</strong>:</p>
+      <p>Your registration is <strong>confirmed</strong>! Here is your ticket for <strong>${event.title}</strong>:</p>
 
       <div class="ticket">
         <span class="gold-badge">${packageName}</span>
@@ -191,15 +225,19 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
         ${locationHtml}
         <img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>
         <div class="ticket-code">${ticketCode}</div>
-        <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code or ticket code at the entrance</p>
+        <p style="font-size:11px;color:#888;margin:4px 0 0">Show this QR code or ticket number at the entrance</p>
       </div>
 
-      ${descriptionSection}
-      ${onlineLinkSection}
+      ${descSection}
+      ${perksHtml}
+      ${meetingSection}
       ${whatsappSection}
 
       <div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:14px 16px;margin:20px 0">
-        <p style="margin:0;font-size:13px;color:#5C4500"><strong>📌 Reminder:</strong> Please arrive 10–15 minutes early. Bring this email or your ticket code for check-in.</p>
+        <p style="margin:0;font-size:13px;color:#5C4500">
+          <strong>📌 Reminder:</strong> Please arrive 10–15 minutes before the event starts.
+          Bring this email or your ticket code for check-in.
+        </p>
       </div>
 
       <p>We look forward to seeing you. Barakallahu feekum. 🌿</p>
@@ -208,11 +246,12 @@ const sendEventTicketEmail = async ({ to, name, event, packageName, ticketCode, 
       </div>
     `)
   };
+
   try {
     await mailer.sendMail(mail);
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    await logEmail({ to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    await logEmail({ to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
     throw err;
   }
 };
