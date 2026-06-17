@@ -207,19 +207,40 @@ exports.resendOtp = async (req, res) => {
       [user.id, otp, type, expiresAt]
     );
 
+    /* Always log OTP to console — visible even when email is broken */
     if (process.env.NODE_ENV !== 'production') {
       console.log('\n' + '='.repeat(44));
       console.log('  OTP CODE (resend) — ' + email.trim());
       console.log('  Code: ' + otp + '   (expires 30 min)');
       console.log('='.repeat(44) + '\n');
     }
+
+    /* Try to send email and tell the user exactly what happened */
+    let emailSent = false;
+    let emailError = null;
     try {
       await sendOtpEmail({ to: email.toLowerCase().trim(), name: user.name, otp, type });
+      emailSent = true;
     } catch (mailErr) {
+      emailError = mailErr.message;
       logger.warn('resendOtp: email failed — ' + mailErr.message);
     }
 
-    return ok(res, { message: 'A fresh verification code has been sent to your email.' });
+    if (emailSent) {
+      return ok(res, {
+        sent: true,
+        message: `A fresh verification code has been sent to ${email.toLowerCase().trim()}.`
+      });
+    } else {
+      /* OTP is saved in DB — user can still verify if they get the code another way.
+       * In dev, the code was logged to the server console above. */
+      return ok(res, {
+        sent: false,
+        message: process.env.NODE_ENV !== 'production'
+          ? `Email delivery failed — check the server console for your code. (${emailError})`
+          : 'We could not send the email right now. Please try again in a few minutes.'
+      });
+    }
   } catch (err) { return serverErr(res, err, 'Resend failed'); }
 };
 
