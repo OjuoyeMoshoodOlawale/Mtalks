@@ -44,7 +44,7 @@ exports.register = async (req, res) => {
     // Clear any previous unused OTPs for this user
     await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [userId, 'verify_email']);
     await db.query(
-      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at, used) VALUES (?, ?, ?, ?, 0)',
       [userId, otp, 'verify_email', expiresAt]
     );
 
@@ -123,7 +123,7 @@ exports.login = async (req, res) => {
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
         await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [user.id, 'verify_email']);
         await db.query(
-          'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+          'INSERT INTO otp_tokens (user_id, token, type, expires_at, used) VALUES (?, ?, ?, ?, 0)',
           [user.id, otp, 'verify_email', expiresAt]
         );
         if (process.env.NODE_ENV !== 'production') {
@@ -203,7 +203,7 @@ exports.resendOtp = async (req, res) => {
     // Invalidate old OTPs, then insert fresh one
     await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [user.id, type]);
     await db.query(
-      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at, used) VALUES (?, ?, ?, ?, 0)',
       [user.id, otp, type, expiresAt]
     );
 
@@ -243,7 +243,7 @@ exports.forgotPassword = async (req, res) => {
     /* Clear any previous unused reset tokens — only one active at a time */
     await db.query('DELETE FROM otp_tokens WHERE user_id = ? AND type = ?', [id, 'reset_password']);
     await db.query(
-      'INSERT INTO otp_tokens (user_id, token, type, expires_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO otp_tokens (user_id, token, type, expires_at, used) VALUES (?, ?, ?, ?, 0)',
       [id, otp, 'reset_password', expiresAt]
     );
 
