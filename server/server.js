@@ -29,7 +29,8 @@ const REQUIRED = [
   'DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME',
   'JWT_SECRET', 'JWT_REFRESH_SECRET',
 ];
-const missing = REQUIRED.filter(k => !process.env[k]);
+/* Use 'in' check — allows empty string values (e.g. DB_PASS= for no password) */
+const missing = REQUIRED.filter(k => !(k in process.env));
 if (missing.length) {
   console.error('\n' + '═'.repeat(60));
   console.error('  ❌  Missing required environment variables:');
@@ -47,7 +48,7 @@ const WARN_IF_MISSING = {
   GMAIL_APP_PASSWORD:   'No Gmail fallback for email',
 };
 const warnings = Object.entries(WARN_IF_MISSING)
-  .filter(([k]) => !process.env[k] || process.env[k].startsWith('REPLACE_'))
+  .filter(([k]) => !(k in process.env) || process.env[k].startsWith('REPLACE_'))
   .map(([k, reason]) => `  ⚠️  ${k} not set — ${reason}`);
 
 if (warnings.length) {
