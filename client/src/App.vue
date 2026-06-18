@@ -21,8 +21,7 @@ const showBot = computed(() =>
   !crispActive.value && !route.path.startsWith('/admin') && !route.path.includes('/learn'))
 
 onMounted(async () => {
-  if (auth.accessToken) await auth.fetchMe()
-
+  // Note: auth.fetchMe() is handled by the router beforeEach guard (once per session)
   // Load Crisp chat widget if website ID is set in admin Settings
   try {
     const { data } = await api.get('/settings/public')
@@ -50,7 +49,13 @@ const iconFor = (type) => ({
 <template>
   <RouterView v-slot="{ Component }">
     <Transition name="page" mode="out-in">
-      <component :is="Component" />
+      <!--
+        :key="route.fullPath" forces a full component remount on every navigation.
+        Without this, Vue reuses the same component instance when navigating between
+        routes that share a component (e.g., /events/slug-a → /events/slug-b),
+        causing onMounted to not fire and the page to appear blank.
+      -->
+      <component :is="Component" :key="route.fullPath" />
     </Transition>
   </RouterView>
 
