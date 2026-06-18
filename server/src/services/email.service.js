@@ -10,13 +10,16 @@ const { generateQrDataUrl } = require('./ticket.service');
  * logEmail — writes a record to email_logs for audit/debugging.
  * Fails silently so a logging error never crashes an email send.
  */
-const logEmail = async ({ to, subject, type, status, error = null }) => {
-  try {
-    await db.query(
-      'INSERT INTO email_logs (recipient, subject, type, status, error_message, sent_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [to, subject, type, status, error, new Date()]
-    );
-  } catch (_) { /* non-blocking */ }
+/**
+ * logEmail — fire-and-forget audit log. NEVER awaited in the send path
+ * so a DB error here can never cause an email to appear as failed.
+ * Column names match schema: to_email, error, created_at (auto).
+ */
+const logEmail = ({ to, subject, type, status, error = null }) => {
+  db.query(
+    'INSERT INTO email_logs (to_email, subject, type, status, error) VALUES (?, ?, ?, ?, ?)',
+    [to, subject, type, status, error]
+  ).catch(e => console.warn('[logEmail] DB insert failed (non-fatal):', e.message));
 };
 
 const BRAND    = 'Muhsinah Academy';
@@ -88,9 +91,9 @@ const sendOtpEmail = async ({ to, name, otp, type }) => {
   };
   try {
     await mailer.sendMail(mail);
-    await logEmail({ to, subject: mail.subject, type: 'otp', status: 'sent' });
+    logEmail({ to, subject: mail.subject, type: 'otp', status: 'sent' });
   } catch (err) {
-    await logEmail({ to, subject: mail.subject, type: 'otp', status: 'failed', error: err.message });
+    logEmail({ to, subject: mail.subject, type: 'otp', status: 'failed', error: err.message });
     throw err;
   }
 };
@@ -110,9 +113,9 @@ const sendWelcomeEmail = async ({ to, name }) => {
   };
   try {
     await mailer.sendMail(mail);
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
     throw err;
   }
 };
@@ -135,16 +138,28 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   };
   try {
     await mailer.sendMail(mail);
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
     throw err;
   }
 };
 
 /** Event ticket — full details: QR code, meeting link, WhatsApp, package perks, description */
 const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketCode }) => {
-  const qrDataUrl  = await generateQrDataUrl(ticketCode);
+  console.log('[sendEventTicketEmail] ▶ to:', to, '| event:', event?.title, '| ticket:', ticketCode);
+
+  if (!to)    throw new Error('sendEventTicketEmail: recipient email is missing');
+  if (!event) throw new Error('sendEventTicketEmail: event object is null/undefined');
+
+  let qrDataUrl;
+  try {
+    qrDataUrl = await generateQrDataUrl(ticketCode);
+    console.log('[sendEventTicketEmail] QR generated ✅');
+  } catch (qrErr) {
+    console.error('[sendEventTicketEmail] QR generation failed:', qrErr.message);
+    qrDataUrl = ''; // send email without QR rather than failing entirely
+  }
   const whatsapp   = event.whatsapp_link  || null;
   const meetLink   = event.meeting_link   || null;   // DB column = meeting_link (not online_link)
   const isOnline   = event.type === 'online';
@@ -223,7 +238,7 @@ const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketC
         <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
         <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
         ${locationHtml}
-        <img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>
+        ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ''}
         <div class="ticket-code">${ticketCode}</div>
         <p style="font-size:11px;color:#888;margin:4px 0 0">Show this QR code or ticket number at the entrance</p>
       </div>
@@ -248,11 +263,14 @@ const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketC
   };
 
   try {
+    console.log('[sendEventTicketEmail] Calling mailer.sendMail...');
     await mailer.sendMail(mail);
-    await logEmail({ to, subject: mail.subject, type: 'email', status: 'sent' });
+    console.log('[sendEventTicketEmail] ✅ Email sent to:', to);
+    logEmail({ to, subject: mail.subject, type: 'email', status: 'sent' }); // fire-and-forget
   } catch (err) {
-    await logEmail({ to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
-    throw err;
+    console.error('[sendEventTicketEmail] ❌ mailer.sendMail failed:', err.message);
+    logEmail({ to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    throw err; // re-throw so _processEvent can track emailSent=false
   }
 };
 
@@ -275,9 +293,9 @@ const sendPaymentReceiptEmail = async ({ to, name, amount, reference, descriptio
   };
   try {
     await mailer.sendMail(mail);
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
     throw err;
   }
 };
@@ -318,9 +336,9 @@ async function sendContactNotification ({ name, email, subject, message }) {
   };
   try {
     await mailer.sendMail(mail);
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
-    await logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
     throw err;
   }
 }
