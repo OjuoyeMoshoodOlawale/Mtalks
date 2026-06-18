@@ -78,6 +78,14 @@ exports.create = async (req, res) => {
   const { title, description, banner, type, delivery_mode, venue, meeting_link, whatsapp_link, event_date, deadline, currency, packages } = req.body;
   const mode = delivery_mode || (type === 'offline' ? 'physical' : 'online_meeting');
   const derivedType = mode === 'physical' ? 'offline' : 'online'; // backward compat
+
+  /* ── DEBUG: log full incoming body ── */
+  console.log('\n[events.create] ▶ body received:');
+  console.log('  title:', title);
+  console.log('  delivery_mode:', delivery_mode, '→ mode:', mode);
+  console.log('  currency:', currency);
+  console.log('  packages (raw):', JSON.stringify(packages, null, 2));
+
   if (!title || !event_date || !deadline) return badReq(res, 'Title, event date and deadline are required');
   try {
     const slug = slugify(title) + '-' + Date.now().toString(36);
@@ -90,11 +98,15 @@ exports.create = async (req, res) => {
     );
     const eventId = result.insertId;
 
+    console.log('[events.create] packages array?', Array.isArray(packages), '| length:', packages?.length);
+
     if (Array.isArray(packages) && packages.length) {
-      for (const pkg of packages) {
+      for (const [i, pkg] of packages.entries()) {
+        console.log(`[events.create] pkg[${i}]:`, JSON.stringify(pkg));
         const pkgPrice = parseFloat(pkg.price);
-        if (!pkg.name?.trim() || isNaN(pkgPrice) || pkgPrice < 0) {
-          logger.warn('events.create: skipping invalid package', { pkg });
+        console.log(`[events.create] pkg[${i}] pkgPrice parsed:`, pkgPrice, '| isNaN:', isNaN(pkgPrice));
+        if (!pkg.name?.trim() || isNaN(pkgPrice) || pkgPrice <= 0) {
+          console.warn(`[events.create] ⚠️  Skipping pkg[${i}] — name="${pkg.name}" price="${pkg.price}" (parsed: ${pkgPrice})`);
           continue;
         }
         const earlyPrice = pkg.early_bird_price ? parseFloat(pkg.early_bird_price) : null;
