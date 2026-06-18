@@ -21,7 +21,7 @@ const saving      = ref(false)
 const deleting    = ref(false)
 const editTarget  = ref(null)
 
-const blankForm = () => ({ title:'', description:'', banner:'', type:'online', venue:'', meeting_link:'',
+const blankForm = () => ({ title:'', description:'', banner:'', delivery_mode:'online_meeting', currency:'NGN', venue:'', meeting_link:'',
   whatsapp_link:'', event_date:'', deadline:'', is_published:false,
   packages: [{ name:'Standard', description:'', price:'', early_bird_price:'', early_bird_deadline:'', capacity:100 }]
 })
@@ -37,7 +37,8 @@ onMounted(fetchAll)
 const openCreate = () => { editTarget.value=null; form.value=blankForm(); showForm.value=true }
 const openEdit   = (e) => {
   editTarget.value=e
-  form.value={ ...e, event_date: e.event_date?.slice(0,16), deadline: e.deadline?.slice(0,16),
+  const dm = e.delivery_mode || (e.type==='offline' ? 'physical' : 'online_meeting');
+  form.value={ ...e, delivery_mode: dm, event_date: e.event_date?.slice(0,16), deadline: e.deadline?.slice(0,16),
     packages: e.packages||[{ name:'Standard', description:'', price:'', early_bird_price:'', early_bird_deadline:'', capacity:100 }]
   }
   showForm.value=true
@@ -100,7 +101,7 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric'
                     <p style="font-size:.75rem;color:var(--ma-text-muted);margin:2px 0 0">{{ ev.packages?.length||0 }} packages</p>
                   </td>
                   <td style="white-space:nowrap;font-size:.85rem">{{ fmtDate(ev.event_date) }}</td>
-                  <td><span class="badge" :class="ev.type==='online'?'badge--green':'badge--gold'">{{ ev.type }}</span></td>
+                  <td><span class="badge" :class="{'badge--green':ev.delivery_mode==='online_meeting','badge--gold':ev.delivery_mode==='physical','badge--blue':ev.delivery_mode==='whatsapp','badge--purple':ev.delivery_mode==='hybrid'}">{{ ev.delivery_mode?.replace('_',' ') || ev.type }}</span></td>
                   <td style="white-space:nowrap;font-size:.85rem">{{ fmtDate(ev.deadline) }}</td>
                   <td>
                     <button @click="togglePublish(ev)" class="status-toggle" :class="ev.is_published?'published':'draft'">
@@ -128,14 +129,34 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric'
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <BaseInput v-model="form.title" label="Event title" placeholder="The Muhsinah Summit 2026" required style="grid-column:span 2"/>
       <div class="form-group">
-        <label class="form-label">Type</label>
-        <select v-model="form.type" class="form-input">
-          <option value="online">Online</option>
-          <option value="offline">In-Person (Offline)</option>
+        <label class="form-label">Delivery Mode</label>
+        <select v-model="form.delivery_mode" class="form-input">
+          <option value="online_meeting">Online Meeting (Zoom / Google Meet)</option>
+          <option value="physical">Physical / In-Person</option>
+          <option value="whatsapp">WhatsApp Programme</option>
+          <option value="hybrid">Hybrid (Physical + Online)</option>
         </select>
       </div>
-      <BaseInput v-if="form.type==='offline'" v-model="form.venue" label="Venue" placeholder="Meethaq Hotels, Jabi, Abuja"/>
-      <BaseInput v-else v-model="form.meeting_link" label="Meeting link (Zoom/Google Meet)" placeholder="https://…"/>
+
+      <!-- Currency -->
+      <div class="form-group">
+        <label class="form-label">Currency</label>
+        <select v-model="form.currency" class="form-input">
+          <option value="NGN">NGN — Nigerian Naira (₦)</option>
+          <option value="USD">USD — US Dollar ($)</option>
+        </select>
+      </div>
+
+      <BaseInput
+        v-if="form.delivery_mode==='physical' || form.delivery_mode==='hybrid'"
+        v-model="form.venue" label="Venue"
+        placeholder="Meethaq Hotels, Jabi, Abuja" style="grid-column:span 2"
+      />
+      <BaseInput
+        v-if="form.delivery_mode==='online_meeting' || form.delivery_mode==='hybrid'"
+        v-model="form.meeting_link" label="Meeting Link (Zoom / Google Meet)"
+        placeholder="https://zoom.us/j/…" style="grid-column:span 2"
+      />
       <BaseInput v-model="form.event_date" label="Event date & time" type="datetime-local" required/>
       <BaseInput v-model="form.deadline" label="Registration deadline" type="datetime-local" required/>
     </div>
@@ -160,8 +181,8 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-NG',{day:'numeric'
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <BaseInput v-model="pkg.name" label="Name" placeholder="Standard / Early Bird / VIP"/>
           <BaseInput v-model="pkg.capacity" label="Capacity" type="number" placeholder="100"/>
-          <BaseInput v-model="pkg.price" label="Price (₦)" type="number" placeholder="5000"/>
-          <BaseInput v-model="pkg.early_bird_price" label="Early Bird Price (₦)" type="number" placeholder="3500"/>
+          <BaseInput v-model="pkg.price" :label="`Price (${form.currency === 'USD' ? '$' : '₦'})`" type="number" placeholder="5000"/>
+          <BaseInput v-model="pkg.early_bird_price" :label="`Early Bird Price (${form.currency === 'USD' ? '$' : '₦'})`" type="number" placeholder="3500"/>
           <BaseInput v-model="pkg.early_bird_deadline" label="Early Bird Deadline" type="datetime-local" style="grid-column:span 2"/>
         </div>
         <div class="form-group" style="margin-top:8px">

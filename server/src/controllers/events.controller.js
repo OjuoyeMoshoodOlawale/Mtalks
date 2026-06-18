@@ -75,7 +75,9 @@ exports.getOne = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
-  const { title, description, banner, type, venue, meeting_link, whatsapp_link, event_date, deadline, packages } = req.body;
+  const { title, description, banner, type, delivery_mode, venue, meeting_link, whatsapp_link, event_date, deadline, currency, packages } = req.body;
+  const mode = delivery_mode || (type === 'offline' ? 'physical' : 'online_meeting');
+  const derivedType = mode === 'physical' ? 'offline' : 'online'; // backward compat
   if (!title || !event_date || !deadline) return badReq(res, 'Title, event date and deadline are required');
   try {
     const slug = slugify(title) + '-' + Date.now().toString(36);
@@ -106,7 +108,7 @@ exports.create = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-  const allowed = ['title','description','banner','type','venue','meeting_link','whatsapp_link','event_date','deadline','is_published'];
+  const allowed = ['title','description','banner','type','delivery_mode','venue','meeting_link','whatsapp_link','event_date','deadline','currency','is_published'];
   const updates = []; const vals = [];
   for (const key of allowed) {
     if (key in req.body) { updates.push(`${key} = ?`); vals.push(req.body[key]); }

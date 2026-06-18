@@ -201,7 +201,7 @@ exports.initialize = async (req, res) => {
       if (new Date(event.deadline) < now)  return badReq(res, 'Registration deadline has passed');
 
       description = `Event: ${event.title} — ${pkg.name}`;
-      metadata    = { event_id: event.id, package_id: pkg.id, package_name: pkg.name };
+      metadata    = { event_id: event.id, package_id: pkg.id, package_name: pkg.name, currency: event.currency || 'NGN' };
     }
 
     const reference = `MTK-${type.toUpperCase()}-${uuidv4().split('-')[0].toUpperCase()}`;
@@ -221,6 +221,7 @@ exports.initialize = async (req, res) => {
         amount,
         reference,
         metadata,
+        currency: metadata.currency || 'NGN',
         callback_url: (process.env.CLIENT_URL || 'http://localhost:5173') + '/payment/verify',
       });
       authorization_url = txn.authorization_url;

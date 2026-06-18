@@ -145,24 +145,20 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   }
 };
 
-/** Event ticket — full details: QR code, meeting link, WhatsApp, package perks, description */
+/** Event registration confirmation — generic across all delivery modes */
 const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketCode }) => {
-  console.log('[sendEventTicketEmail] ▶ to:', to, '| event:', event?.title, '| ticket:', ticketCode);
+  console.log('[sendEventTicketEmail] ▶ to:', to, '| event:', event?.title, '| mode:', event?.delivery_mode, '| ticket:', ticketCode);
 
   if (!to)    throw new Error('sendEventTicketEmail: recipient email is missing');
   if (!event) throw new Error('sendEventTicketEmail: event object is null/undefined');
 
-  let qrDataUrl;
-  try {
-    qrDataUrl = await generateQrDataUrl(ticketCode);
-    console.log('[sendEventTicketEmail] QR generated ✅');
-  } catch (qrErr) {
-    console.error('[sendEventTicketEmail] QR generation failed:', qrErr.message);
-    qrDataUrl = ''; // send email without QR rather than failing entirely
-  }
-  const whatsapp   = event.whatsapp_link  || null;
-  const meetLink   = event.meeting_link   || null;   // DB column = meeting_link (not online_link)
-  const isOnline   = event.type === 'online';
+  const mode     = event.delivery_mode || (event.type === 'offline' ? 'physical' : 'online_meeting');
+  const isPhysical   = mode === 'physical';
+  const isWhatsapp   = mode === 'whatsapp';
+  const isOnlineMeet = mode === 'online_meeting';
+  const isHybrid     = mode === 'hybrid';
+  const currency     = event.currency || 'NGN';
+  const symbol       = currency === 'USD' ? '$' : '₦';
 
   const dateStr = new Date(event.event_date).toLocaleDateString('en-NG', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -171,91 +167,120 @@ const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketC
     hour: '2-digit', minute: '2-digit'
   });
 
-  /* ── Location row ── */
-  const locationHtml = isOnline
-    ? `<div class="info"><span class="label">Format</span><span>🌐 Online — join link included below</span></div>`
-    : `<div class="info"><span class="label">Venue</span><span>📍 ${event.venue || 'TBA'}</span></div>`;
+  /* ── QR code — only for physical/hybrid check-in ── */
+  let qrDataUrl = null;
+  if (isPhysical || isHybrid) {
+    try {
+      qrDataUrl = await generateQrDataUrl(ticketCode);
+      console.log('[sendEventTicketEmail] QR generated ✅');
+    } catch (e) {
+      console.warn('[sendEventTicketEmail] QR generation skipped:', e.message);
+    }
+  }
 
-  /* ── Online meeting link section ── */
-  const meetingSection = (isOnline && meetLink) ? `
+  /* ── Location / format section ── */
+  let locationHtml = '';
+  if (isPhysical || isHybrid) {
+    locationHtml += `<div class="info"><span class="label">📍 Venue</span><span>${event.venue || 'TBA — check WhatsApp group for updates'}</span></div>`;
+  }
+  if (isOnlineMeet || isHybrid) {
+    locationHtml += `<div class="info"><span class="label">🌐 Format</span><span>Online — join link below</span></div>`;
+  }
+  if (isWhatsapp) {
+    locationHtml += `<div class="info"><span class="label">💬 Format</span><span>WhatsApp — join link below</span></div>`;
+  }
+
+  /* ── Ticket block (only for physical/hybrid) ── */
+  const ticketBlock = (isPhysical || isHybrid) ? `
+    <div class="ticket">
+      <span class="gold-badge">${packageName}</span>
+      <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
+      <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
+      <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
+      ${locationHtml}
+      ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ''}
+      <div class="ticket-code">${ticketCode}</div>
+      <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code or ticket number at the entrance</p>
+    </div>` : `
+    <div style="background:${GREEN_TINT};border:1px solid ${GREEN};border-radius:12px;padding:20px;margin:20px 0">
+      <span class="gold-badge">${packageName}</span>
+      <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
+      <div class="info"><span>📅 ${dateStr}</span></div>
+      <div class="info"><span>🕐 ${timeStr}</span></div>
+      ${locationHtml}
+      <p style="font-size:11px;color:#6B7B6B;margin:12px 0 0">Reference: <strong>${ticketCode}</strong></p>
+    </div>`;
+
+  /* ── Online meeting link ── */
+  const meetSection = ((isOnlineMeet || isHybrid) && event.meeting_link) ? `
     <div style="background:#EBF7DC;border-left:4px solid ${GREEN};border-radius:8px;padding:16px;margin:20px 0">
       <p style="margin:0 0 6px;font-weight:700;color:${GREEN_DARK}">🔗 Online Join Link</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">Click below at event time. Do not share — this link is tied to your registration.</p>
+      <div style="text-align:center">
+        <a href="${event.meeting_link}" style="display:inline-block;background:${GREEN};color:#fff;padding:10px 28px;border-radius:6px;text-decoration:none;font-weight:700">Join Event</a>
+      </div>
+    </div>` : '';
+
+  /* ── WhatsApp section ── */
+  const whatsappSection = event.whatsapp_link ? `
+    <div class="whatsapp-box">
+      <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">
+        💬 ${isWhatsapp ? 'Join the WhatsApp Programme' : 'Join the Private WhatsApp Group'}
+      </p>
       <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
-        Click the button below at event time. Do not share this link — it is unique to your registration.
+        ${isWhatsapp
+          ? 'This is a private WhatsApp-based programme. Join the group below to access all sessions and materials.'
+          : 'This link is exclusively for registered participants. Please do not share it publicly.'}
       </p>
       <div style="text-align:center">
-        <a href="${meetLink}" style="display:inline-block;background:${GREEN};color:#fff;padding:10px 28px;border-radius:6px;text-decoration:none;font-weight:700;">
-          Join Event
+        <a href="${event.whatsapp_link}" class="whatsapp-btn">
+          ${isWhatsapp ? 'Join Programme on WhatsApp' : 'Join WhatsApp Group'}
         </a>
       </div>
     </div>` : '';
 
-  /* ── Event description ── */
+  /* ── Description ── */
   const descSection = event.description ? `
     <div style="margin:20px 0;padding:16px;background:#F9FBF6;border-radius:8px;border:1px solid #D4E8C4">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">📋 About This Event</p>
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">📋 About This Programme</p>
       <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.7;white-space:pre-line">${event.description}</p>
     </div>` : '';
 
   /* ── Package perks ── */
   let perksHtml = '';
-  const pkgDesc  = pkg?.description || null;
   const pkgPerks = (() => { try { return pkg?.perks ? JSON.parse(pkg.perks) : null; } catch { return null; } })();
-  if (pkgDesc || (Array.isArray(pkgPerks) && pkgPerks.length)) {
-    const perkItems = Array.isArray(pkgPerks)
-      ? pkgPerks.map(p => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D">✅ ${p}</li>`).join('')
-      : '';
+  if (pkg?.description || (Array.isArray(pkgPerks) && pkgPerks.length)) {
     perksHtml = `
     <div style="margin:20px 0;padding:16px;background:#FFFDF0;border-radius:8px;border:1px solid #F0E0A0">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">🎁 What's Included (${packageName})</p>
-      ${pkgDesc ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkgDesc}</p>` : ''}
-      ${perkItems ? `<ul style="margin:0;padding-left:16px">${perkItems}</ul>` : ''}
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">🎁 What's Included — ${packageName}</p>
+      ${pkg.description ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkg.description}</p>` : ''}
+      ${Array.isArray(pkgPerks) && pkgPerks.length
+        ? `<ul style="margin:0;padding-left:16px">${pkgPerks.map(p => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D">✅ ${p}</li>`).join('')}</ul>`
+        : ''}
     </div>`;
   }
 
-  /* ── WhatsApp group ── */
-  const whatsappSection = whatsapp ? `
-    <div class="whatsapp-box">
-      <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">💬 Join the Private WhatsApp Group</p>
-      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
-        This link is exclusively for registered participants. Please do not share it publicly.
+  /* ── Arrival reminder (physical only) ── */
+  const reminderSection = (isPhysical || isHybrid) ? `
+    <div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:14px 16px;margin:20px 0">
+      <p style="margin:0;font-size:13px;color:#5C4500">
+        <strong>📌 Reminder:</strong> Please arrive 10–15 minutes before the event starts. Bring this email or your ticket code for check-in.
       </p>
-      <div style="text-align:center">
-        <a href="${whatsapp}" class="whatsapp-btn">Join WhatsApp Group</a>
-      </div>
     </div>` : '';
 
   const mail = {
     from: getMailFrom(), to,
-    subject: `Your Ticket: ${event.title} — ${BRAND}`,
+    subject: `Registration Confirmed: ${event.title} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Your registration is <strong>confirmed</strong>! Here is your ticket for <strong>${event.title}</strong>:</p>
-
-      <div class="ticket">
-        <span class="gold-badge">${packageName}</span>
-        <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-        <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
-        <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
-        ${locationHtml}
-        ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ''}
-        <div class="ticket-code">${ticketCode}</div>
-        <p style="font-size:11px;color:#888;margin:4px 0 0">Show this QR code or ticket number at the entrance</p>
-      </div>
-
+      <p>Your registration for <strong>${event.title}</strong> is confirmed! 🎉</p>
+      ${ticketBlock}
       ${descSection}
       ${perksHtml}
-      ${meetingSection}
+      ${meetSection}
       ${whatsappSection}
-
-      <div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:14px 16px;margin:20px 0">
-        <p style="margin:0;font-size:13px;color:#5C4500">
-          <strong>📌 Reminder:</strong> Please arrive 10–15 minutes before the event starts.
-          Bring this email or your ticket code for check-in.
-        </p>
-      </div>
-
-      <p>We look forward to seeing you. Barakallahu feekum. 🌿</p>
+      ${reminderSection}
+      <p style="margin-top:24px">We look forward to seeing you. Barakallahu feekum. 🌿</p>
       <div style="text-align:center;margin-top:16px">
         <a href="${SITE_URL}/events" class="btn">View All Events</a>
       </div>
@@ -266,13 +291,14 @@ const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketC
     console.log('[sendEventTicketEmail] Calling mailer.sendMail...');
     await mailer.sendMail(mail);
     console.log('[sendEventTicketEmail] ✅ Email sent to:', to);
-    logEmail({ to, subject: mail.subject, type: 'email', status: 'sent' }); // fire-and-forget
+    logEmail({ to, subject: mail.subject, type: 'email', status: 'sent' });
   } catch (err) {
     console.error('[sendEventTicketEmail] ❌ mailer.sendMail failed:', err.message);
     logEmail({ to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
-    throw err; // re-throw so _processEvent can track emailSent=false
+    throw err;
   }
 };
+
 
 /** Payment receipt */
 const sendPaymentReceiptEmail = async ({ to, name, amount, reference, description }) => {
