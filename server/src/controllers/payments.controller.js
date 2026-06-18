@@ -20,6 +20,7 @@ const { sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail } =
 const { generateTicketCode } = require('../services/ticket.service');
 const { ok, created, badReq, notFound, serverErr, paginate } =
   require('../utils/helpers');
+const { calculatePaystackFee, calculateGrossAmount } = require('../utils/paystackFees');
 const logger = require('../utils/logger');
 
 /* ─────────────────────────────────────────────
@@ -204,24 +205,31 @@ exports.initialize = async (req, res) => {
       metadata    = { event_id: event.id, package_id: pkg.id, package_name: pkg.name, currency: event.currency || 'NGN' };
     }
 
+    /* Calculate Paystack fee and gross amount (what customer actually pays) */
+    const currency    = metadata.currency || 'NGN';
+    const { fee, total: grossAmount, breakdown } = calculatePaystackFee(amount, currency);
+    const chargeAmount = calculateGrossAmount(amount, currency); // what we send to Paystack
+
+    console.log(`\n[initialize] Fee breakdown: ${breakdown}`);
+
     const reference = `MTK-${type.toUpperCase()}-${uuidv4().split('-')[0].toUpperCase()}`;
 
     await db.query(
       `INSERT INTO payments (user_id, type, item_id, amount, reference, status, metadata)
        VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-      [userId, type, item_id, amount, reference, JSON.stringify(metadata)]
+      [userId, type, item_id, amount, reference, JSON.stringify({ ...metadata, fee, grossAmount })]
     );
 
-    console.log('\n[initialize] ✅ Payment record created:', reference, '| amount:', amount, '| type:', type);
+    console.log('[initialize] ✅ Payment record created:', reference, '| base:', amount, '| fee:', fee, '| total:', grossAmount, '| currency:', currency);
 
     let authorization_url = null;
     try {
       const txn = await initializeTransaction({
         email:    user.email,
-        amount,
+        amount:   chargeAmount,  // gross — customer pays this, merchant receives 'amount'
         reference,
         metadata,
-        currency: metadata.currency || 'NGN',
+        currency,
         callback_url: (process.env.CLIENT_URL || 'http://localhost:5173') + '/payment/verify',
       });
       authorization_url = txn.authorization_url;
@@ -276,9 +284,15 @@ exports.initializeGuestEvent = async (req, res) => {
       ]
     );
 
-    console.log('\n[initializeGuestEvent] ✅ Guest payment record:', reference, '| amount:', amount);
+    const gCurrency = JSON.parse(JSON.stringify({ package_id, guest: true }))
+    const gCurr = 'NGN'; // guests default NGN; extend when needed
+    const { fee: gFee, total: gTotal, breakdown: gBreakdown } = calculatePaystackFee(amount, gCurr);
+    const gChargeAmount = calculateGrossAmount(amount, gCurr);
 
-    return created(res, { reference, amount });
+    console.log(`\n[initializeGuestEvent] ✅ Guest payment record: ${reference} | base: ${amount} | fee: ${gFee} | total: ${gTotal}`);
+    console.log('[initializeGuestEvent] Fee breakdown:', gBreakdown);
+
+    return created(res, { reference, amount, fee: gFee, total: gTotal, chargeAmount: gChargeAmount });
   } catch (err) {
     logger.error('payments.initializeGuestEvent', { error: err.message });
     return serverErr(res, err, `Guest event payment init failed: ${err.message}`);
