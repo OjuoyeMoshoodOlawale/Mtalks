@@ -284,7 +284,7 @@ const payAsGuest = async () => {
                     <p class="reg-pkg-name">{{ pkg.name }}</p>
                     <p class="reg-pkg-price">
                       {{ formatAmount(pkgPrice(pkg), event?.currency || 'NGN') }}
-                      <s v-if="isEarlyBird(pkg)" class="reg-pkg-strike">₦{{ Number(pkg.price).toLocaleString() }}</s>
+                      <s v-if="isEarlyBird(pkg)" class="reg-pkg-strike">{{ formatAmount(pkg.price, event?.currency || 'NGN') }}</s>
                     </p>
                     <p v-if="isEarlyBird(pkg)" class="reg-pkg-early">
                       Early-bird ends {{ new Date(pkg.early_bird_deadline).toLocaleDateString('en-NG',{day:'numeric',month:'short'}) }}

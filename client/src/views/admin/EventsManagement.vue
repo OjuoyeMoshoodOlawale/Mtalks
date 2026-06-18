@@ -51,10 +51,27 @@ const save = async () => {
   if (!form.value.title || !form.value.event_date || !form.value.deadline) {
     ui.toastError('Title, event date and deadline are required'); return
   }
+
+  /* Validate + coerce package prices to numbers before sending */
+  const packages = (form.value.packages || []).map(p => ({
+    ...p,
+    price:           parseFloat(p.price)            || 0,
+    early_bird_price: parseFloat(p.early_bird_price) || null,
+    capacity:        parseInt(p.capacity)            || 100,
+  }))
+
+  const invalidPkg = packages.find(p => !p.name?.trim() || p.price <= 0)
+  if (invalidPkg) {
+    ui.toastError('Each package must have a name and a price greater than 0'); return
+  }
+
+  const payload = { ...form.value, packages }
+  console.log('[save] Submitting event payload:', JSON.stringify(payload, null, 2))
+
   saving.value=true
   try {
-    if (editTarget.value) { await api.put(`/events/${editTarget.value.id}`, form.value); ui.toast('Event updated') }
-    else { await api.post('/events', form.value); ui.toast('Event created') }
+    if (editTarget.value) { await api.put(`/events/${editTarget.value.id}`, payload); ui.toast('Event updated') }
+    else { await api.post('/events', payload); ui.toast('Event created') }
     showForm.value=false; fetchAll()
   } catch (e) { ui.toastError(e.response?.data?.message||'Save failed') }
   finally { saving.value=false }

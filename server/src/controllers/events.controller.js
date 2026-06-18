@@ -82,21 +82,33 @@ exports.create = async (req, res) => {
   try {
     const slug = slugify(title) + '-' + Date.now().toString(36);
     const [result] = await db.query(
-      `INSERT INTO events (title, slug, description, banner, type, venue, meeting_link, whatsapp_link, event_date, deadline)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, slug, description || null, banner || null, type || 'online',
-       venue || null, meeting_link || null, whatsapp_link || null, event_date, deadline]
+      `INSERT INTO events (title, slug, description, banner, type, delivery_mode, venue, meeting_link, whatsapp_link, event_date, deadline, currency)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, slug, description || null, banner || null, derivedType,
+       mode, venue || null, meeting_link || null, whatsapp_link || null,
+       event_date, deadline, currency || 'NGN']
     );
     const eventId = result.insertId;
 
-    if (Array.isArray(packages)) {
+    if (Array.isArray(packages) && packages.length) {
       for (const pkg of packages) {
+        const pkgPrice = parseFloat(pkg.price);
+        if (!pkg.name?.trim() || isNaN(pkgPrice) || pkgPrice < 0) {
+          logger.warn('events.create: skipping invalid package', { pkg });
+          continue;
+        }
+        const earlyPrice = pkg.early_bird_price ? parseFloat(pkg.early_bird_price) : null;
         await db.query(
           `INSERT INTO event_packages (event_id, name, description, price, early_bird_price, early_bird_deadline, capacity, perks)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [eventId, pkg.name, pkg.description || null, pkg.price, pkg.early_bird_price || null,
-           pkg.early_bird_deadline || null, pkg.capacity || 100, JSON.stringify(pkg.perks || [])]
+          [eventId, pkg.name.trim(), pkg.description || null,
+           pkgPrice,
+           (!isNaN(earlyPrice) && earlyPrice > 0) ? earlyPrice : null,
+           pkg.early_bird_deadline || null,
+           pkg.capacity ? parseInt(pkg.capacity) : 100,
+           JSON.stringify(pkg.perks || [])]
         );
+        console.log('[events.create] ✅ Package saved:', pkg.name, '| price:', pkgPrice, '| currency:', currency || 'NGN');
       }
     }
 
