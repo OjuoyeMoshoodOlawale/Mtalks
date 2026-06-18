@@ -13,18 +13,13 @@ const BASE = 'https://api.paystack.co';
  * Use sk_test_... for test mode, sk_live_... for production.
  */
 /**
- * Your Paystack Secret Key — same key used for both API calls AND webhook verification.
- * Paystack has NO separate webhook secret. The webhook signature is HMAC-SHA512 of the
- * payload signed with this same secret key. (per paystack.com/docs/payments/webhooks)
- *
- * Get it from: dashboard.paystack.com → Settings → API Keys & Webhooks
- *   Test mode:  sk_test_xxxxxxxxxxxxxxxxxx
- *   Live mode:  sk_live_xxxxxxxxxxxxxxxxxx
+ * Paystack secret key — reads from process.env.PAYSTACK_SECRET_KEY in server/.env
+ * Same key is used for API calls AND webhook signature verification.
+ * No separate webhook secret (Paystack signs with the same key).
+ * Get from: dashboard.paystack.com → Settings → API Keys & Webhooks
  */
-const PAYSTACK_SECRET_KEY = 'REPLACE_WITH_PAYSTACK_SECRET_KEY'; // sk_test_... or sk_live_...
-
-const SK     = () => PAYSTACK_SECRET_KEY;
-const WH_SEC = () => PAYSTACK_SECRET_KEY; // same key — no separate webhook secret on Paystack
+const SK     = () => process.env.PAYSTACK_SECRET_KEY || '';
+const WH_SEC = () => process.env.PAYSTACK_SECRET_KEY || '';
 
 const headers = () => ({
   Authorization:  `Bearer ${SK()}`,

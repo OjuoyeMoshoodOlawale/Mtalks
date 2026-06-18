@@ -1,6 +1,75 @@
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const fs   = require('fs');
+
+/* ── Load .env ─────────────────────────────────────────────────────────── */
+const envPath = path.join(__dirname, '.env');
+
+if (!fs.existsSync(envPath)) {
+  console.error('\n' + '═'.repeat(60));
+  console.error('  ❌  server/.env file not found!');
+  console.error('');
+  console.error('  Fix:');
+  console.error('    cd server');
+  console.error('    cp .env.example .env');
+  console.error('    # then fill in your values in .env');
+  console.error('═'.repeat(60) + '\n');
+  process.exit(1);
+}
+
+const result = require('dotenv').config({ path: envPath });
+if (result.error) {
+  console.error('❌ dotenv failed to parse .env:', result.error.message);
+  process.exit(1);
+}
+
+/* ── Validate required vars ────────────────────────────────────────────── */
+const REQUIRED = [
+  'DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME',
+  'JWT_SECRET', 'JWT_REFRESH_SECRET',
+];
+const missing = REQUIRED.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error('\n' + '═'.repeat(60));
+  console.error('  ❌  Missing required environment variables:');
+  missing.forEach(k => console.error('      •', k));
+  console.error('');
+  console.error('  Open server/.env and fill in the missing values.');
+  console.error('═'.repeat(60) + '\n');
+  process.exit(1);
+}
+
+/* ── Warn about optional-but-important vars ───────────────────────────── */
+const WARN_IF_MISSING = {
+  SMTP_PASS:            'Emails will not send (cPanel SMTP)',
+  PAYSTACK_SECRET_KEY:  'Payments will not verify with Paystack',
+  GMAIL_APP_PASSWORD:   'No Gmail fallback for email',
+};
+const warnings = Object.entries(WARN_IF_MISSING)
+  .filter(([k]) => !process.env[k] || process.env[k].startsWith('REPLACE_'))
+  .map(([k, reason]) => `  ⚠️  ${k} not set — ${reason}`);
+
+if (warnings.length) {
+  console.warn('\n' + '─'.repeat(60));
+  console.warn('  Environment warnings:');
+  warnings.forEach(w => console.warn(w));
+  console.warn('─'.repeat(60));
+}
+
+/* ── Print loaded config summary (no secrets) ─────────────────────────── */
+console.log('\n[ENV] ✅ Loaded server/.env successfully');
+console.log('[ENV]  NODE_ENV  :', process.env.NODE_ENV);
+console.log('[ENV]  PORT      :', process.env.PORT || 5000);
+console.log('[ENV]  DB_HOST   :', process.env.DB_HOST);
+console.log('[ENV]  DB_NAME   :', process.env.DB_NAME);
+console.log('[ENV]  SMTP_HOST :', process.env.SMTP_HOST || '(not set)');
+console.log('[ENV]  SMTP_USER :', process.env.SMTP_USER || '(not set)');
+console.log('[ENV]  PAYSTACK  :', process.env.PAYSTACK_SECRET_KEY ? '✅ key set' : '❌ not set');
+console.log('[ENV]  JWT       :', process.env.JWT_SECRET ? '✅ set' : '❌ not set');
+console.log('');
+
+/* ── Start app ─────────────────────────────────────────────────────────── */
 const app    = require('./src/app');
 const logger = require('./src/utils/logger');
 const db     = require('./src/config/db');
@@ -19,10 +88,7 @@ async function startServer() {
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`\n  Port ${PORT} is already in use.\n`);
-        console.error(`  Kill the existing process with:\n`);
-        console.error(`    Windows:  for /f "tokens=5" %a in ('netstat -ano ^| findstr :${PORT} ^| findstr LISTENING') do taskkill /PID %a /F`);
-        console.error(`    Mac/Linux: kill -9 $(lsof -ti :${PORT})\n`);
-        console.error(`  Then run:   node server.js\n`);
+        console.error(`  Kill with:  kill -9 $(lsof -ti :${PORT})\n`);
         process.exit(1);
       } else {
         logger.error('Server error', { error: err.message });
