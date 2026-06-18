@@ -10,11 +10,15 @@ exports.getAll = async (req, res) => {
   const where = req.user?.role === 'admin' ? '' : 'WHERE e.is_published = 1';
   try {
     const [events] = await db.query(
-      `SELECT e.*, GROUP_CONCAT(
-         JSON_OBJECT('id',ep.id,'name',ep.name,'price',ep.price,
-           'early_bird_price',ep.early_bird_price,'early_bird_deadline',ep.early_bird_deadline,
-           'capacity',ep.capacity)
-       ) AS packages_raw
+      `SELECT e.*,
+              GROUP_CONCAT(
+                JSON_OBJECT(
+                  'id',ep.id,'name',ep.name,'description',ep.description,
+                  'price',ep.price,'early_bird_price',ep.early_bird_price,
+                  'early_bird_deadline',ep.early_bird_deadline,
+                  'capacity',ep.capacity,'perks',ep.perks
+                ) ORDER BY ep.id ASC
+              ) AS packages_raw
        FROM events e
        LEFT JOIN event_packages ep ON ep.event_id = e.id
        ${where}
@@ -23,10 +27,21 @@ exports.getAll = async (req, res) => {
     );
 
     const parsed = events.map(ev => {
-      const out = {
-        ...ev,
-        packages: ev.packages_raw ? JSON.parse(`[${ev.packages_raw}]`) : []
-      };
+      let packages = [];
+      if (ev.packages_raw) {
+        try {
+          packages = JSON.parse('[' + ev.packages_raw + ']');
+          /* MySQL JSON_OBJECT returns numbers as strings — cast back */
+          packages = packages.map(p => ({
+            ...p,
+            price:            p.price            != null ? Number(p.price)            : null,
+            early_bird_price: p.early_bird_price  != null ? Number(p.early_bird_price) : null,
+          }));
+        } catch (parseErr) {
+          console.error('[events.getAll] packages_raw parse error:', parseErr.message);
+        }
+      }
+      const out = { ...ev, packages };
       delete out.packages_raw;
       return out;
     });
@@ -39,12 +54,18 @@ exports.getAll = async (req, res) => {
   }
 };
 
+const castPackages = (pkgs) => pkgs.map(p => ({
+  ...p,
+  price:            p.price            != null ? Number(p.price)            : null,
+  early_bird_price: p.early_bird_price  != null ? Number(p.early_bird_price) : null,
+}));
+
 exports.getById = async (req, res) => {
   try {
     const [[event]] = await db.query('SELECT * FROM events WHERE id = ?', [req.params.id]);
     if (!event) return notFound(res, 'Event not found');
-    const [packages] = await db.query('SELECT * FROM event_packages WHERE event_id = ?', [event.id]);
-    event.packages = packages;
+    const [packages] = await db.query('SELECT * FROM event_packages WHERE event_id = ? ORDER BY id ASC', [event.id]);
+    event.packages = castPackages(packages);
     return ok(res, event);
   } catch (err) { return serverErr(res, err, 'Server error'); }
 };
@@ -54,8 +75,8 @@ exports.getOne = async (req, res) => {
     const [[event]] = await db.query('SELECT * FROM events WHERE slug = ?', [req.params.slug]);
     if (!event) return notFound(res, 'Event not found');
 
-    const [packages] = await db.query('SELECT * FROM event_packages WHERE event_id = ?', [event.id]);
-    event.packages = packages;
+    const [packages] = await db.query('SELECT * FROM event_packages WHERE event_id = ? ORDER BY id ASC', [event.id]);
+    event.packages = castPackages(packages);
 
     // Check if user is registered
     if (req.user) {

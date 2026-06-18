@@ -6,7 +6,8 @@ import api from '@/services/api'
 import PublicHeader from '@/components/layout/PublicHeader.vue'
 import PublicFooter from '@/components/layout/PublicFooter.vue'
 import BaseLoader   from '@/components/common/BaseLoader.vue'
-import { Calendar, MapPin, Monitor, Tag, Clock, ChevronRight } from 'lucide-vue-next'
+import { Calendar, MapPin, Monitor, MessageCircle, Users, Tag, Clock, ChevronRight } from 'lucide-vue-next'
+import { formatAmount } from '@/utils/paystack'
 
 import { useSeoMeta } from '@/composables/useSeoMeta'
 
@@ -33,6 +34,23 @@ const lowestPrice = (event) => {
   const prices = event.packages.map(p => isEarlyBird(p) ? Number(p.early_bird_price) : Number(p.price))
   return Math.min(...prices)
 }
+
+const lowestPriceFormatted = (event) => {
+  const price = lowestPrice(event)
+  if (price === null) return null
+  return formatAmount(price, event.currency || 'NGN')
+}
+
+const deliveryBadge = (ev) => {
+  const mode = ev.delivery_mode || (ev.type === 'offline' ? 'physical' : 'online_meeting')
+  const map = {
+    physical:       { label: 'In-Person',     icon: 'MapPin'   },
+    online_meeting: { label: 'Online',         icon: 'Monitor'  },
+    whatsapp:       { label: 'WhatsApp',       icon: 'MessageCircle' },
+    hybrid:         { label: 'Hybrid',         icon: 'Users'    },
+  }
+  return map[mode] || { label: mode, icon: 'Monitor' }
+}
 </script>
 
 <template>
@@ -58,8 +76,12 @@ const lowestPrice = (event) => {
           <div class="event-banner">
             <img :src="ev.banner || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=70&auto=format'" :alt="ev.title" loading="lazy" />
             <div class="event-type-badge">
-              <Monitor v-if="ev.type==='online'" :size="14" /> <MapPin v-else :size="14" />
-              {{ ev.type === 'online' ? 'Online' : 'In-Person' }}
+              <Monitor       v-if="(ev.delivery_mode||ev.type)==='online_meeting'||ev.type==='online'" :size="14" />
+              <MapPin        v-else-if="ev.delivery_mode==='physical'||ev.type==='offline'"            :size="14" />
+              <MessageCircle v-else-if="ev.delivery_mode==='whatsapp'"                                 :size="14" />
+              <Users         v-else-if="ev.delivery_mode==='hybrid'"                                   :size="14" />
+              <Monitor       v-else                                                                      :size="14" />
+              {{ deliveryBadge(ev).label }}
             </div>
           </div>
           <div class="event-body">
@@ -73,7 +95,7 @@ const lowestPrice = (event) => {
             <div class="event-footer">
               <div v-if="ev.packages?.length">
                 <span class="section-tag" style="font-size:.7rem">From</span>
-                <span class="event-price">₦{{ lowestPrice(ev)?.toLocaleString() }}</span>
+                <span class="event-price">{{ lowestPriceFormatted(ev) }}</span>
                 <span v-if="ev.packages.some(p=>isEarlyBird(p))" class="badge badge--gold" style="margin-left:6px">Early Bird</span>
               </div>
               <span class="event-cta">Pay Now <ChevronRight :size="16" /></span>

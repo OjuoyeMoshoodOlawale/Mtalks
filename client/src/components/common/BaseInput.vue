@@ -25,7 +25,11 @@ const inputType = () => props.type === 'password' ? (show.value ? 'text' : 'pass
         :value="modelValue"
         :placeholder="placeholder"
         :class="['form-input', { 'is-error': error }]"
-        @input="emit('update:modelValue', $event.target.value)"
+        @input="emit('update:modelValue',
+          props.type === 'number'
+            ? ($event.target.value === '' ? '' : Number($event.target.value))
+            : $event.target.value
+        )"
         v-bind="$attrs"
       />
       <button
