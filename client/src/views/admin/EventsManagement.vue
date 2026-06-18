@@ -52,29 +52,47 @@ const save = async () => {
     ui.toastError('Title, event date and deadline are required'); return
   }
 
-  /* Validate + coerce package prices to numbers before sending */
-  const packages = (form.value.packages || []).map(p => ({
-    ...p,
-    price:           parseFloat(p.price)            || 0,
-    early_bird_price: parseFloat(p.early_bird_price) || null,
-    capacity:        parseInt(p.capacity)            || 100,
-  }))
+  /* Coerce + validate packages */
+  const packages = (form.value.packages || []).map(p => {
+    const price     = p.price     !== '' && p.price     !== null && p.price     !== undefined ? Number(p.price)           : null
+    const earlyPrice = p.early_bird_price !== '' && p.early_bird_price !== null && p.early_bird_price !== undefined ? Number(p.early_bird_price) : null
+    return {
+      ...p,
+      name:             String(p.name || '').trim(),
+      price:            price,
+      early_bird_price: (earlyPrice !== null && earlyPrice > 0) ? earlyPrice : null,
+      capacity:         parseInt(p.capacity) || 100,
+    }
+  })
 
-  const invalidPkg = packages.find(p => !p.name?.trim() || p.price <= 0)
-  if (invalidPkg) {
-    ui.toastError('Each package must have a name and a price greater than 0'); return
+  /* Show clear errors per package */
+  for (const [i, p] of packages.entries()) {
+    if (!p.name)                    { ui.toastError(`Package ${i+1}: name is required`);            return }
+    if (p.price === null || isNaN(p.price)) { ui.toastError(`Package ${i+1}: enter a valid price`); return }
+    if (p.price < 0)                { ui.toastError(`Package ${i+1}: price cannot be negative`);   return }
   }
 
   const payload = { ...form.value, packages }
-  console.log('[save] Submitting event payload:', JSON.stringify(payload, null, 2))
 
-  saving.value=true
+  /* Debug: log exactly what will be sent */
+  console.log('[save] packages being sent:', packages.map(p => ({ name: p.name, price: p.price, type: typeof p.price })))
+
+  saving.value = true
   try {
-    if (editTarget.value) { await api.put(`/events/${editTarget.value.id}`, payload); ui.toast('Event updated') }
-    else { await api.post('/events', payload); ui.toast('Event created') }
-    showForm.value=false; fetchAll()
-  } catch (e) { ui.toastError(e.response?.data?.message||'Save failed') }
-  finally { saving.value=false }
+    if (editTarget.value) {
+      await api.put(`/events/${editTarget.value.id}`, payload)
+      ui.toast('Event updated')
+    } else {
+      const { data } = await api.post('/events', payload)
+      console.log('[save] server response:', data)
+      ui.toast('Event created')
+    }
+    showForm.value = false
+    fetchAll()
+  } catch (e) {
+    console.error('[save] error:', e.response?.data || e.message)
+    ui.toastError(e.response?.data?.message || 'Save failed')
+  } finally { saving.value = false }
 }
 
 const togglePublish = async (ev) => {

@@ -103,24 +103,48 @@ exports.create = async (req, res) => {
     if (Array.isArray(packages) && packages.length) {
       for (const [i, pkg] of packages.entries()) {
         console.log(`[events.create] pkg[${i}]:`, JSON.stringify(pkg));
-        const pkgPrice = parseFloat(pkg.price);
-        console.log(`[events.create] pkg[${i}] pkgPrice parsed:`, pkgPrice, '| isNaN:', isNaN(pkgPrice));
-        if (!pkg.name?.trim() || isNaN(pkgPrice) || pkgPrice <= 0) {
-          console.warn(`[events.create] ⚠️  Skipping pkg[${i}] — name="${pkg.name}" price="${pkg.price}" (parsed: ${pkgPrice})`);
+
+        const pkgPrice = pkg.price !== null && pkg.price !== undefined && pkg.price !== ''
+          ? parseFloat(pkg.price) : NaN;
+
+        console.log(`[events.create] pkg[${i}] pkgPrice:`, pkgPrice, '| name:', pkg.name);
+
+        if (!pkg.name?.trim()) {
+          console.warn(`[events.create] ⚠️  Skipping pkg[${i}] — missing name`);
           continue;
         }
-        const earlyPrice = pkg.early_bird_price ? parseFloat(pkg.early_bird_price) : null;
-        await db.query(
-          `INSERT INTO event_packages (event_id, name, description, price, early_bird_price, early_bird_deadline, capacity, perks)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [eventId, pkg.name.trim(), pkg.description || null,
-           pkgPrice,
-           (!isNaN(earlyPrice) && earlyPrice > 0) ? earlyPrice : null,
-           pkg.early_bird_deadline || null,
-           pkg.capacity ? parseInt(pkg.capacity) : 100,
-           JSON.stringify(pkg.perks || [])]
-        );
-        console.log('[events.create] ✅ Package saved:', pkg.name, '| price:', pkgPrice, '| currency:', currency || 'NGN');
+        if (isNaN(pkgPrice)) {
+          console.warn(`[events.create] ⚠️  Skipping pkg[${i}] "${pkg.name}" — price is NaN (raw value: "${pkg.price}")`);
+          continue;
+        }
+
+        const earlyPrice = pkg.early_bird_price !== null && pkg.early_bird_price !== undefined && pkg.early_bird_price !== ''
+          ? parseFloat(pkg.early_bird_price) : null;
+
+        const values = [
+          eventId,
+          pkg.name.trim(),
+          pkg.description || null,
+          pkgPrice,
+          (earlyPrice !== null && !isNaN(earlyPrice) && earlyPrice > 0) ? earlyPrice : null,
+          pkg.early_bird_deadline || null,
+          pkg.capacity ? parseInt(pkg.capacity) : 100,
+          JSON.stringify(pkg.perks || [])
+        ];
+
+        console.log(`[events.create] INSERT pkg[${i}] values:`, values);
+
+        try {
+          await db.query(
+            `INSERT INTO event_packages (event_id, name, description, price, early_bird_price, early_bird_deadline, capacity, perks)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            values
+          );
+          console.log(`[events.create] ✅ pkg[${i}] "${pkg.name}" saved — price: ${pkgPrice} ${currency || 'NGN'}`);
+        } catch (pkgErr) {
+          console.error(`[events.create] ❌ pkg[${i}] INSERT failed:`, pkgErr.message);
+          console.error(`[events.create] ❌ values were:`, values);
+        }
       }
     }
 
