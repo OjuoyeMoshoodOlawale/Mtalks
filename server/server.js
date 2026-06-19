@@ -6,22 +6,17 @@ const fs   = require('fs');
 /* ── Load .env ─────────────────────────────────────────────────────────── */
 const envPath = path.join(__dirname, '.env');
 
-if (!fs.existsSync(envPath)) {
-  console.error('\n' + '═'.repeat(60));
-  console.error('  ❌  server/.env file not found!');
-  console.error('');
-  console.error('  Fix:');
-  console.error('    cd server');
-  console.error('    cp .env.example .env');
-  console.error('    # then fill in your values in .env');
-  console.error('═'.repeat(60) + '\n');
-  process.exit(1);
-}
-
-const result = require('dotenv').config({ path: envPath });
-if (result.error) {
-  console.error('❌ dotenv failed to parse .env:', result.error.message);
-  process.exit(1);
+if (fs.existsSync(envPath)) {
+  /* Load .env file if it exists (local dev) */
+  const result = require('dotenv').config({ path: envPath });
+  if (result.error) {
+    console.warn('⚠️  dotenv parse error (continuing with system env):', result.error.message);
+  } else {
+    console.log('[ENV] Loaded from server/.env file');
+  }
+} else {
+  /* Production: cPanel injects env vars directly — no .env file needed */
+  console.log('[ENV] No .env file found — using system/cPanel environment variables');
 }
 
 /* ── Validate required vars ────────────────────────────────────────────── */
