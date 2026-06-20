@@ -110,7 +110,7 @@ async function seed() {
 
   /* 5. EVENTS */
   await c.query(`INSERT INTO events
-    (title,slug,description,banner,type,venue,whatsapp_link,event_date,deadline,is_published) VALUES
+    (title,slug,description,banner,type,delivery_mode,venue,whatsapp_link,event_date,deadline,currency,is_published) VALUES
     ('Muhsinah Marriage Summit 2025','muhsinah-marriage-summit-2025',
      'Nigeria''s premier Muslim marriage enrichment summit. Join Coach Madinah Sanni and leading relationship experts for a transformative 2-day experience in Abuja. Connect with hundreds of like-minded couples and singles, gain practical tools grounded in Islamic wisdom, and leave with a renewed vision for your marriage and family life. This is the most impactful marriage event in Nigeria this year.',
      'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1200',

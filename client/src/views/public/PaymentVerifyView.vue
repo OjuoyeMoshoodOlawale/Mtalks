@@ -34,7 +34,7 @@ onMounted(async () => {
 
     status.value  = 'success'
     message.value = data.emailSent
-      ? `Registration confirmed! Ticket sent to your email. 🎉`
+      ? `Registration confirmed! Ticket sent to your email.`
       : data.emailNote || 'Registration confirmed!'
 
     ui.toast(message.value)
@@ -62,7 +62,7 @@ onMounted(async () => {
 
       <!-- Success -->
       <div v-else-if="status==='success'">
-        <div style="font-size:3rem;margin-bottom:16px">🎉</div>
+        <div style="font-size:2.5rem;margin-bottom:16px;color:var(--ma-green-dark)">&#10003;</div>
         <h3 style="color:#16a34a;margin:0 0 8px">Payment Confirmed!</h3>
         <p style="color:#475569;font-size:.9rem;margin:0 0 24px">{{ message }}</p>
         <p style="color:#94a3b8;font-size:.8rem">Redirecting to your events…</p>
@@ -70,7 +70,7 @@ onMounted(async () => {
 
       <!-- Failed -->
       <div v-else>
-        <div style="font-size:3rem;margin-bottom:16px">⚠️</div>
+        <div style="font-size:2.5rem;margin-bottom:16px;color:#dc2626">&#33;</div>
         <h3 style="color:#dc2626;margin:0 0 8px">Verification Issue</h3>
         <p style="color:#475569;font-size:.9rem;margin:0 0 24px">{{ message }}</p>
         <p style="color:#94a3b8;font-size:.8rem">Redirecting you back…</p>

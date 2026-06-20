@@ -64,8 +64,11 @@ h3{font-size:clamp(1.15rem,2.5vw,1.75rem)} p{line-height:1.75}
 .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap-lg)}
 .grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--gap-lg)}
 .grid-4{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--gap-md)}
-.page-enter-active,.page-leave-active{transition:opacity .25s ease,transform .25s ease}
-.page-enter-from{opacity:0;transform:translateY(12px)} .page-leave-to{opacity:0;transform:translateY(-8px)}
+/* Page transition — concurrent (no blank gap between pages) */
+.page-enter-active{transition:opacity .18s ease,transform .18s ease}
+.page-leave-active{transition:opacity .12s ease;position:absolute;top:0;left:0;right:0;z-index:-1}
+.page-enter-from{opacity:0;transform:translateY(8px)}
+.page-leave-to{opacity:0}
 @media(max-width:768px){.container{padding:0 var(--gap-md)}.section{padding:var(--gap-xl) 0}.hide-mobile{display:none!important}}
 @media(min-width:769px){.hide-desktop{display:none!important}}
 
@@ -122,4 +125,15 @@ h3{font-size:clamp(1.15rem,2.5vw,1.75rem)} p{line-height:1.75}
 @media(max-width:768px){
   .data-table thead th,.data-table tbody td{padding:8px 10px;font-size:.78rem}
   .td-actions .action-btn span{display:none} /* icon-only on mobile */
+}
+
+/* Navigation progress bar */
+.nav-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 9999;
+  background: linear-gradient(90deg, var(--ma-green), var(--ma-gold));
+  animation: nav-slide 0.4s ease-out forwards;
+}
+@keyframes nav-slide {
+  from { width: 0; opacity: 1 }
+  to   { width: 85%; opacity: 1 }
 }

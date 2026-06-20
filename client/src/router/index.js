@@ -45,7 +45,9 @@ const routes = [
   { path: '/admin/testimonials',       name: 'AdminTestimonials',component: () => import('@/views/admin/TestimonialsManagement.vue'),  meta: { requiresAdmin: true } },
   { path: '/admin/faqs',               name: 'AdminFaqs',        component: () => import('@/views/admin/FaqManagement.vue'),           meta: { requiresAdmin: true } },
   { path: '/admin/settings',           name: 'AdminSettings',    component: () => import('@/views/admin/SettingsView.vue'),            meta: { requiresAdmin: true } },
+  { path: '/admin/sync', name: 'AdminSync', component: () => import('@/views/admin/SyncManagement.vue'), meta: { requiresAdmin: true } },
   { path: '/admin/logs',               name: 'AdminLogs',        component: () => import('@/views/admin/ErrorLogsView.vue'),           meta: { requiresAdmin: true } },
+  { path: '/admin/payments/:id/receipt', name: 'PaymentReceipt', component: () => import('@/views/admin/PaymentReceiptView.vue'), meta: { requiresAdmin: true } },
   { path: '/admin/messages',           name: 'AdminMessages',    component: () => import('@/views/admin/MessagesView.vue'),            meta: { requiresAdmin: true } },
   { path: '/admin/muzzamil',           name: 'AdminBot',         component: () => import('@/views/admin/BotKnowledgeView.vue'),        meta: { requiresAdmin: true } },
   { path: '/admin/gallery',            name: 'AdminGallery',     component: () => import('@/views/admin/GalleryManagement.vue'),       meta: { requiresAdmin: true } },
@@ -63,7 +65,9 @@ const router = createRouter({
   scrollBehavior: (to, from, savedPosition) => {
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash, behavior: 'smooth' }
-    return { top: 0, behavior: 'smooth' }
+    // 'instant' scroll to top — 'smooth' on page change fights the page transition
+    // and makes the blank gap appear longer
+    return { top: 0, behavior: 'instant' }
   }
 })
 
@@ -99,11 +103,12 @@ router.beforeEach(async (to) => {
  */
 router.onError((err, to) => {
   const isChunkError =
-    err.message.includes('Failed to fetch dynamically imported module') ||
-    err.message.includes('Importing a module script failed')            ||
-    err.message.includes('ChunkLoadError')                              ||
-    err.message.includes('Loading chunk')                               ||
-    err.message.includes('Unable to preload CSS')
+    err?.message?.includes('Failed to fetch dynamically imported module') ||
+    err?.message?.includes('Importing a module script failed')            ||
+    err?.message?.includes('ChunkLoadError')                              ||
+    err?.message?.includes('Loading chunk')                               ||
+    err?.message?.includes('Unable to preload CSS')                       ||
+    err?.message?.includes('error loading dynamically imported module')
 
   if (isChunkError) {
     console.warn('[Router] Chunk load error — reloading to:', to.fullPath, err.message)

@@ -1,9 +1,38 @@
+# Muhsinah Academy — Apache config for cPanel SPA deployment
 Options -MultiViews
 RewriteEngine On
 
-# Serve existing files and directories directly
+# ── HTTPS redirect (enable in production) ────────────────────────────────
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# ── CORS headers for API proxy (if API is on same domain) ────────────────
+<IfModule mod_headers.c>
+  Header always set Access-Control-Allow-Origin "*"
+  Header always set Access-Control-Allow-Methods "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  Header always set Access-Control-Allow-Headers "Content-Type,Authorization,X-Requested-With"
+  Header always set Access-Control-Max-Age "86400"
+</IfModule>
+
+# ── Handle OPTIONS preflight ──────────────────────────────────────────────
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^ - [R=200,L]
+
+# ── Serve existing files and folders directly ─────────────────────────────
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Everything else serves index.html (SPA fallback)
+# ── SPA fallback — everything else → index.html ──────────────────────────
 RewriteRule ^ index.html [QSA,L]
+
+# ── Cache static assets ──────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css             "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png            "access plus 1 year"
+  ExpiresByType image/jpeg           "access plus 1 year"
+  ExpiresByType image/webp           "access plus 1 year"
+  ExpiresByType image/svg+xml        "access plus 1 year"
+  ExpiresByType application/json     "access plus 0 seconds"
+</IfModule>
