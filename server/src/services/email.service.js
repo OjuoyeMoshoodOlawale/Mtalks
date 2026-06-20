@@ -180,268 +180,182 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   }
 };
 
-/** Event registration confirmation — generic across all delivery modes */
+/** Event registration confirmation
+ *
+ * Customer-first design — Paystack already sends the receipt.
+ * We send ONLY what the customer needs to attend:
+ *   1. Confirmation + event name/date/time   (save it)
+ *   2. WhatsApp link or meeting link         (join now)
+ *   3. Ticket code + QR                      (check-in)
+ *   4. What's included in their package      (expectations)
+ *   5. Contact / reminder                    (support)
+ */
 const sendEventTicketEmail = async ({
-  to,
-  name,
-  event,
-  pkg,
-  packageName,
-  ticketCode,
+  to, name, event, pkg, packageName, ticketCode,
 }) => {
-  console.log(
-    "[sendEventTicketEmail] ▶ to:",
-    to,
-    "| event:",
-    event?.title,
-    "| mode:",
-    event?.delivery_mode,
-    "| ticket:",
-    ticketCode,
-  );
+  if (!to)    throw new Error('sendEventTicketEmail: to is missing');
+  if (!event) throw new Error('sendEventTicketEmail: event is missing');
 
-  if (!to) throw new Error("sendEventTicketEmail: recipient email is missing");
-  if (!event)
-    throw new Error("sendEventTicketEmail: event object is null/undefined");
+  const mode        = event.delivery_mode || (event.type === 'offline' ? 'physical' : 'online_meeting');
+  const isPhysical  = mode === 'physical';
+  const isWhatsapp  = mode === 'whatsapp';
+  const isOnlineMt  = mode === 'online_meeting';
+  const isHybrid    = mode === 'hybrid';
 
-  const mode =
-    event.delivery_mode ||
-    (event.type === "offline" ? "physical" : "online_meeting");
-  const isPhysical = mode === "physical";
-  const isWhatsapp = mode === "whatsapp";
-  const isOnlineMeet = mode === "online_meeting";
-  const isHybrid = mode === "hybrid";
-  const currency = event.currency || "NGN";
-  const symbol = currency === "USD" ? "$" : "₦";
+  /* ── Date + time ── */
+  const evDate  = new Date(event.event_date);
+  const dateStr = evDate.toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = evDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
 
-  const dateStr = new Date(event.event_date).toLocaleDateString("en-NG", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = new Date(event.event_date).toLocaleTimeString("en-NG", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  /* ── QR code — only for physical/hybrid check-in ── */
-  let qrDataUrl = null;
+  /* ── QR code (physical/hybrid only — needed for door check-in) ── */
+  let qrHtml = '';
   if (isPhysical || isHybrid) {
     try {
-      qrDataUrl = await generateQrDataUrl(ticketCode);
-      console.log("[sendEventTicketEmail] QR generated ");
+      const qrUrl = await generateQrDataUrl(ticketCode);
+      qrHtml = `
+        <div style="text-align:center;margin:20px 0">
+          <img src="${qrUrl}" alt="Your QR Ticket" width="160" height="160"
+               style="display:block;margin:0 auto 10px;border:3px solid ${GREEN};border-radius:12px"/>
+          <p style="margin:0;font-size:12px;color:#6B7B6B">Screenshot and save this QR code</p>
+        </div>`;
     } catch (e) {
-      console.warn("[sendEventTicketEmail] QR generation skipped:", e.message);
+      console.warn('[ticket email] QR skipped:', e.message);
     }
   }
 
-  /* ── Location / format section ── */
-  let locationHtml = "";
-  if (isPhysical || isHybrid) {
-    locationHtml += `<div class="info"><span class="label"> Venue</span><span>${event.venue || "TBA — check WhatsApp group for updates"}</span></div>`;
-  }
-  if (isOnlineMeet || isHybrid) {
-    locationHtml += `<div class="info"><span class="label"> Format</span><span>Online — join link below</span></div>`;
-  }
-  if (isWhatsapp) {
-    locationHtml += `<div class="info"><span class="label"> Format</span><span>WhatsApp — join link below</span></div>`;
-  }
+  /* ── HOW TO JOIN — the most important CTA for the customer ── */
+  let joinHtml = '';
 
-  /* ── Ticket block (only for physical/hybrid) ── */
-  const ticketBlock =
-    isPhysical || isHybrid
-      ? `
-    <div class="ticket">
-      <span class="gold-badge">${packageName}</span>
-      <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-      <div class="info" style="justify-content:center"><span> ${dateStr}</span></div>
-      <div class="info" style="justify-content:center"><span> ${timeStr}</span></div>
-      ${locationHtml}
-      ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ""}
-      <div class="ticket-code">${ticketCode}</div>
-      <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code or ticket number at the entrance</p>
-    </div>`
-      : `
-    <div style="background:${GREEN_TINT};border:1px solid ${GREEN};border-radius:12px;padding:20px;margin:20px 0">
-      <span class="gold-badge">${packageName}</span>
-      <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-      <div class="info"><span> ${dateStr}</span></div>
-      <div class="info"><span> ${timeStr}</span></div>
-      ${locationHtml}
-      <p style="font-size:11px;color:#6B7B6B;margin:12px 0 0">Reference: <strong>${ticketCode}</strong></p>
-    </div>`;
-
-  /* ── Online meeting link ── */
-  const meetSection =
-    (isOnlineMeet || isHybrid) && event.meeting_link
-      ? `
-    <div style="background:#EBF7DC;border-left:4px solid ${GREEN};border-radius:8px;padding:16px;margin:20px 0">
-      <p style="margin:0 0 6px;font-weight:700;color:${GREEN_DARK}"> Online Join Link</p>
-      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">Click below at event time. Do not share — this link is tied to your registration.</p>
-      <div style="text-align:center">
-        <a href="${event.meeting_link}" style="display:inline-block;background:${GREEN};color:#fff;padding:10px 28px;border-radius:6px;text-decoration:none;font-weight:700">Join Event</a>
-      </div>
-    </div>`
-      : "";
-
-  /* ── WhatsApp section ── */
-  const whatsappSection = event.whatsapp_link
-    ? `
-    <div class="whatsapp-box">
-      <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">
-         ${isWhatsapp ? "Join the WhatsApp Programme" : "Join the Private WhatsApp Group"}
-      </p>
-      <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
-        ${
-          isWhatsapp
-            ? "This is a private WhatsApp-based programme. Join the group below to access all sessions and materials."
-            : "This link is exclusively for registered participants. Please do not share it publicly."
-        }
-      </p>
-      <div style="text-align:center">
-        <a href="${event.whatsapp_link}" class="whatsapp-btn">
-          ${isWhatsapp ? "Join Programme on WhatsApp" : "Join WhatsApp Group"}
+  if (event.whatsapp_link) {
+    const label = isWhatsapp
+      ? 'Join the WhatsApp Programme'
+      : 'Join the Private WhatsApp Group';
+    const note  = isWhatsapp
+      ? 'This programme runs entirely on WhatsApp. Join the group now to receive sessions and materials.'
+      : 'Your event community is on WhatsApp. Join to get updates, the meeting link, and connect with other participants.';
+    joinHtml += `
+      <div style="background:#e8f9f0;border-radius:12px;padding:20px 24px;margin:24px 0;text-align:center">
+        <p style="margin:0 0 6px;font-weight:800;font-size:16px;color:#1A5C2A">${label}</p>
+        <p style="margin:0 0 16px;font-size:13px;color:#2D6A2D">${note}</p>
+        <a href="${event.whatsapp_link}"
+           style="display:inline-block;background:#25D366;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+          Open WhatsApp Group
         </a>
-      </div>
-    </div>`
-    : "";
+      </div>`;
+  }
 
-  /* ── Description ── */
-  const descSection = event.description
-    ? `
-    <div style="margin:20px 0;padding:16px;background:#F9FBF6;border-radius:8px;border:1px solid #D4E8C4">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px"> About This Programme</p>
-      <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.7;white-space:pre-line">${event.description}</p>
-    </div>`
-    : "";
+  if ((isOnlineMt || isHybrid) && event.meeting_link) {
+    joinHtml += `
+      <div style="background:${GREEN_TINT};border-radius:12px;padding:20px 24px;margin:24px 0;text-align:center">
+        <p style="margin:0 0 6px;font-weight:800;font-size:16px;color:${GREEN_DARK}">Online Join Link</p>
+        <p style="margin:0 0 16px;font-size:13px;color:#2D6A2D">
+          Use this link to join at event time. This link is personal — please do not share it.
+        </p>
+        <a href="${event.meeting_link}"
+           style="display:inline-block;background:${GREEN};color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+          Join the Session
+        </a>
+      </div>`;
+  }
 
-  /* ── Package perks ── */
-  let perksHtml = "";
-  const pkgPerks = (() => {
-    try {
-      return pkg?.perks ? JSON.parse(pkg.perks) : null;
-    } catch {
-      return null;
-    }
-  })();
-  if (pkg?.description || (Array.isArray(pkgPerks) && pkgPerks.length)) {
+  /* ── Venue (physical/hybrid) ── */
+  const venueHtml = (isPhysical || isHybrid) && event.venue
+    ? `<div style="margin:16px 0;padding:14px 18px;background:#f5f7f2;border-radius:8px;border-left:4px solid ${GREEN}">
+        <p style="margin:0;font-size:13px;color:#2D3A2D">
+          <strong>Venue:</strong> ${event.venue}
+        </p>
+       </div>`
+    : '';
+
+  /* ── Package perks (what did they pay for?) ── */
+  let perksHtml = '';
+  if (pkg?.description || pkg?.perks) {
+    const perks = (() => { try { return pkg.perks ? JSON.parse(pkg.perks) : null; } catch { return null; } })();
     perksHtml = `
-    <div style="margin:20px 0;padding:16px;background:#FFFDF0;border-radius:8px;border:1px solid #F0E0A0">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px"> What's Included — ${packageName}</p>
-      ${pkg.description ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkg.description}</p>` : ""}
-      ${
-        Array.isArray(pkgPerks) && pkgPerks.length
-          ? `<ul style="margin:0;padding-left:16px">${pkgPerks.map((p) => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D"> ${p}</li>`).join("")}</ul>`
-          : ""
-      }
-    </div>`;
+      <div style="margin:20px 0;padding:16px 20px;background:#FFFDF0;border-radius:10px;border:1px solid #F0E0A0">
+        <p style="margin:0 0 10px;font-weight:700;color:${GREEN_DARK};font-size:13px;text-transform:uppercase;letter-spacing:.05em">
+          What is included — ${packageName}
+        </p>
+        ${pkg.description ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkg.description}</p>` : ''}
+        ${Array.isArray(perks) && perks.length
+          ? `<ul style="margin:6px 0 0;padding-left:18px">${perks.map(p => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D">${p}</li>`).join('')}</ul>`
+          : ''}
+      </div>`;
   }
 
-  /* ── Arrival reminder (physical only) ── */
-  const reminderSection =
-    isPhysical || isHybrid
-      ? `
-    <div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:14px 16px;margin:20px 0">
-      <p style="margin:0;font-size:13px;color:#5C4500">
-        <strong> Reminder:</strong> Please arrive 10–15 minutes before the event starts. Bring this email or your ticket code for check-in.
-      </p>
-    </div>`
-      : "";
+  /* ── Physical reminder ── */
+  const reminderHtml = (isPhysical || isHybrid)
+    ? `<div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:12px 16px;margin:20px 0">
+        <p style="margin:0;font-size:13px;color:#5C4500">
+          <strong>Reminder:</strong> Please arrive 10 to 15 minutes before the event starts.
+          Bring this email or your ticket code for check-in at the door.
+        </p>
+       </div>`
+    : '';
 
-  const mail = {
-    from: getMailFrom(),
-    to,
-    subject: `Registration Confirmed: ${event.title} — ${BRAND}`,
-    html: base(`
-      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Your registration for <strong>${event.title}</strong> is confirmed! </p>
-      ${ticketBlock}
-      ${descSection}
-      ${perksHtml}
-      ${meetSection}
-      ${whatsappSection}
-      ${reminderSection}
-      <p style="margin-top:24px">We look forward to seeing you. Barakallahu feekum. </p>
-      <div style="text-align:center;margin-top:16px">
-        <a href="${SITE_URL}/events" class="btn">View All Events</a>
+  const html = base(`
+    <p style="margin:0 0 4px">Assalamu Alaikum <strong>${name}</strong>,</p>
+    <p style="margin:0 0 24px;color:#2D3A2D">You are confirmed for the following event. See everything you need below.</p>
+
+    <!-- Event summary card -->
+    <div style="background:${GREEN_DARK};border-radius:14px;padding:24px;text-align:center;margin-bottom:24px">
+      <span style="background:${GOLD};color:#000;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:800;display:inline-block;margin-bottom:14px">
+        ${packageName}
+      </span>
+      <h2 style="color:#fff;margin:0 0 14px;font-size:20px;line-height:1.3">${event.title}</h2>
+      <div style="display:inline-block;background:rgba(255,255,255,.12);border-radius:10px;padding:12px 24px">
+        <p style="color:#A8D5A2;margin:0 0 4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Date and Time</p>
+        <p style="color:#fff;margin:0;font-size:16px;font-weight:700">${dateStr}</p>
+        <p style="color:#D4E8C4;margin:4px 0 0;font-size:14px">${timeStr}</p>
       </div>
-    `),
-  };
+    </div>
+
+    ${joinHtml}
+    ${venueHtml}
+    ${qrHtml}
+
+    <!-- Ticket reference -->
+    <div style="text-align:center;margin:20px 0;padding:16px;background:#F5F7F2;border-radius:10px;border:1px dashed #B8D4A0">
+      <p style="margin:0 0 6px;font-size:12px;color:#6B7B6B;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Your Ticket Reference</p>
+      <p style="margin:0;font-family:monospace;font-size:22px;font-weight:800;color:${GREEN_DARK};letter-spacing:4px">${ticketCode}</p>
+      <p style="margin:6px 0 0;font-size:11px;color:#9AA89A">Mention this reference if you contact us</p>
+    </div>
+
+    ${perksHtml}
+    ${reminderHtml}
+
+    <p style="margin-top:28px;color:#2D3A2D;font-size:14px">
+      We look forward to seeing you.<br/>
+      <strong>Barakallahu feekum.</strong>
+    </p>
+    <p style="font-size:12px;color:#888;margin-top:8px">
+      Questions? Reply to this email or message us on WhatsApp.
+    </p>
+  `);
+
+  const mail = { from: getMailFrom(), to, subject: `You are in: ${event.title} — ${BRAND}`, html };
 
   try {
-    console.log("[sendEventTicketEmail] Calling mailer.sendMail...");
     await mailer.sendMail(mail);
-    console.log("[sendEventTicketEmail]  Email sent to:", to);
-    logEmail({ to, subject: mail.subject, type: "email", status: "sent" });
+    logEmail({ to, subject: mail.subject, type: 'event_ticket', status: 'sent' });
+    console.log('[sendEventTicketEmail] sent to:', to);
   } catch (err) {
-    console.error(
-      "[sendEventTicketEmail] ❌ mailer.sendMail failed:",
-      err.message,
-    );
-    logEmail({
-      to,
-      subject: mail.subject,
-      type: "email",
-      status: "failed",
-      error: err.message,
-    });
+    logEmail({ to, subject: mail.subject, type: 'event_ticket', status: 'failed', error: err.message });
     throw err;
   }
 };
 
-/** Payment receipt */
-const sendPaymentReceiptEmail = async ({
-  to,
-  name,
-  amount,
-  reference,
-  description,
-}) => {
-  const mail = {
-    from: getMailFrom(),
-    to,
-    subject: `Payment Receipt — ${BRAND}`,
-    html: base(`
-      <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>We have received your payment. Here is your receipt:</p>
-      <div class="ticket" style="text-align:left">
-        <div class="info"><span class="label">Description</span><span>${description}</span></div>
-        <div class="info"><span class="label">Amount</span><span style="font-weight:700;font-size:18px">₦${Number(amount).toLocaleString()}</span></div>
-        <div class="info"><span class="label">Reference</span><span style="font-family:monospace;font-size:13px">${reference}</span></div>
-        <div class="info"><span class="label">Date</span><span>${new Date().toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })}</span></div>
-      </div>
-      <p style="font-size:13px;color:#888">Please keep this reference for your records. JazakAllahu Khairan.</p>
-    `),
-  };
-  try {
-    await mailer.sendMail(mail);
-    logEmail({
-      to: mail.to,
-      subject: mail.subject,
-      type: "email",
-      status: "sent",
-    });
-  } catch (err) {
-    logEmail({
-      to: mail.to,
-      subject: mail.subject,
-      type: "email",
-      status: "failed",
-      error: err.message,
-    });
-    throw err;
-  }
+
+/** Payment receipt — intentionally skipped.
+ * Paystack automatically emails the customer a full payment receipt
+ * (with amount, reference, card details, timestamp) after every successful
+ * charge. Sending a duplicate receipt is redundant and clutters the inbox.
+ * This function is kept so existing callers don't break — it simply resolves.
+ */
+const sendPaymentReceiptEmail = async () => {
+  /* no-op — Paystack handles receipts */
 };
 
-module.exports = {
-  sendOtpEmail,
-  sendWelcomeEmail,
-  sendEnrolmentEmail,
-  sendEventTicketEmail,
-  sendPaymentReceiptEmail,
-  sendContactNotification,
-};
 
 /** Contact form notification to admin */
 async function sendContactNotification({ name, email, subject, message }) {
