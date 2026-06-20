@@ -11,42 +11,56 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 /* ── Security ── */
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy:   { policy: 'cross-origin' },
+  crossOriginOpenerPolicy:     { policy: 'same-origin-allow-popups' }, // needed for Paystack popup
+  contentSecurityPolicy:       false,  // managed by Vite/browser, not needed server-side
+}));
 /* ── CORS ─────────────────────────────────────────────────────────────────── */
-const ALLOWED_ORIGINS = [
-  process.env.CLIENT_URL  || 'http://localhost:5173',
+const PRODUCTION_ORIGINS = [
   'https://muhsinahacademy.com',
   'https://www.muhsinahacademy.com',
-  /* Support extra origins for staging / port-forwarding from env */
+  'http://muhsinahacademy.com',     // in case of HTTP redirect not yet set up
+  'http://www.muhsinahacademy.com',
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
   ...(process.env.EXTRA_ORIGINS
     ? process.env.EXTRA_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
     : []),
 ];
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 app.use(cors({
   origin: (origin, cb) => {
-    /* Allow same-origin requests (Postman, curl, direct server calls) */
+    // Allow server-to-server / curl / Postman (no origin header)
     if (!origin) return cb(null, true);
-    /* In development, allow any localhost/LAN/ngrok origin automatically */
-    if (process.env.NODE_ENV !== 'production') {
-      if (
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.includes('192.168.')  ||
-        origin.includes('10.0.')     ||
-        origin.includes('ngrok')     ||
-        origin.includes('ngrok-free') ||
-        origin.includes('loca.lt')   ||
-        origin.includes('trycloudflare') ||
-        origin.includes('devtunnels.ms')
-      ) return cb(null, true);
+
+    // Development: allow everything on localhost, LAN, tunnels
+    if (isDev) {
+      const devHosts = [
+        'localhost', '127.0.0.1', '192.168.', '10.0.',
+        'ngrok', 'ngrok-free', 'loca.lt', 'trycloudflare', 'devtunnels.ms'
+      ];
+      if (devHosts.some(h => origin.includes(h))) return cb(null, true);
     }
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS: origin ${origin} not allowed`));
+
+    // Production: exact match against allowed list
+    if (PRODUCTION_ORIGINS.includes(origin)) return cb(null, true);
+
+    // Block everything else
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    cb(new Error(`CORS policy: ${origin} is not allowed`));
   },
-  credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS']
+  credentials:      true,
+  methods:          ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders:   ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders:   ['X-Total-Count'],
+  optionsSuccessStatus: 200,   // some browsers (IE11) choke on 204
+  preflightContinue: false,
 }));
+
+// Handle OPTIONS preflight explicitly for cPanel/Apache setups
+app.options('*', cors());
 app.use(hpp());
 app.use(xssClean());
 

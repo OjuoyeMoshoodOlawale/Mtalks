@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { onMounted, ref, computed } from 'vue'
+import { RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore }   from '@/stores/ui'
 import BaseToast from '@/components/common/BaseToast.vue'
@@ -9,9 +9,12 @@ import { CheckCircle, XCircle, AlertTriangle } from 'lucide-vue-next'
 import api from '@/services/api'
 import MuzzamilBot from '@/components/common/MuzzamilBot.vue'
 import { useRoute } from 'vue-router'
-import { computed, ref } from 'vue'
 
-const auth = useAuthStore()
+const auth     = useAuthStore()
+const router2  = useRouter()
+const navLoading = ref(false)
+router2.beforeEach(() => { navLoading.value = true })
+router2.afterEach(()  => { setTimeout(() => { navLoading.value = false }, 120) })
 const ui   = useUiStore()
 const route = useRoute()
 const crispActive = ref(false)
@@ -47,16 +50,19 @@ const iconFor = (type) => ({
 </script>
 
 <template>
-  <RouterView v-slot="{ Component }">
-    <Transition name="page" mode="out-in">
+  <!-- Navigation progress bar — prevents perceived blank during route change -->
+  <div v-if="navLoading" class="nav-progress" />
+  <RouterView v-slot="{ Component, route: r }">
       <!--
-        :key="route.fullPath" forces a full component remount on every navigation.
-        Without this, Vue reuses the same component instance when navigating between
-        routes that share a component (e.g., /events/slug-a → /events/slug-b),
-        causing onMounted to not fire and the page to appear blank.
+        BLANK PAGE FIX:
+        mode="out-in" caused a blank gap — old page leaves (250ms) then
+        new page enters (250ms) = 500ms of nothing visible.
+        Removing mode lets old and new overlap (concurrent), no blank gap.
+        :key forces remount when route changes so onMounted always fires.
       -->
-      <component :is="Component" :key="route.fullPath" />
-    </Transition>
+      <Transition name="page">
+        <component :is="Component" :key="r.fullPath" />
+      </Transition>
   </RouterView>
 
   <!-- Muzzamil assistant -->

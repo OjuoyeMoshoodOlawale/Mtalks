@@ -65,7 +65,9 @@ const router = createRouter({
   scrollBehavior: (to, from, savedPosition) => {
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash, behavior: 'smooth' }
-    return { top: 0, behavior: 'smooth' }
+    // 'instant' scroll to top — 'smooth' on page change fights the page transition
+    // and makes the blank gap appear longer
+    return { top: 0, behavior: 'instant' }
   }
 })
 
@@ -101,11 +103,12 @@ router.beforeEach(async (to) => {
  */
 router.onError((err, to) => {
   const isChunkError =
-    err.message.includes('Failed to fetch dynamically imported module') ||
-    err.message.includes('Importing a module script failed')            ||
-    err.message.includes('ChunkLoadError')                              ||
-    err.message.includes('Loading chunk')                               ||
-    err.message.includes('Unable to preload CSS')
+    err?.message?.includes('Failed to fetch dynamically imported module') ||
+    err?.message?.includes('Importing a module script failed')            ||
+    err?.message?.includes('ChunkLoadError')                              ||
+    err?.message?.includes('Loading chunk')                               ||
+    err?.message?.includes('Unable to preload CSS')                       ||
+    err?.message?.includes('error loading dynamically imported module')
 
   if (isChunkError) {
     console.warn('[Router] Chunk load error — reloading to:', to.fullPath, err.message)
