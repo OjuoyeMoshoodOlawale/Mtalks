@@ -2,9 +2,9 @@
  * Email Service — Muhsinah Academy
  * Sends via cPanel SMTP; auto-falls back to Gmail if cPanel is down.
  */
-const mailer   = require('../config/mailer');
-const db       = require('../config/db');
-const { generateQrDataUrl } = require('./ticket.service');
+const mailer = require("../config/mailer");
+const db = require("../config/db");
+const { generateQrDataUrl } = require("./ticket.service");
 
 /**
  * logEmail — writes a record to email_logs for audit/debugging.
@@ -17,23 +17,25 @@ const { generateQrDataUrl } = require('./ticket.service');
  */
 const logEmail = ({ to, subject, type, status, error = null }) => {
   db.query(
-    'INSERT INTO email_logs (to_email, subject, type, status, error) VALUES (?, ?, ?, ?, ?)',
-    [to, subject, type, status, error]
-  ).catch(e => console.warn('[logEmail] DB insert failed (non-fatal):', e.message));
+    "INSERT INTO email_logs (to_email, subject, type, status, error) VALUES (?, ?, ?, ?, ?)",
+    [to, subject, type, status, error],
+  ).catch((e) =>
+    console.warn("[logEmail] DB insert failed (non-fatal):", e.message),
+  );
 };
 
-const BRAND    = 'Muhsinah Academy';
-const SITE_URL = process.env.CLIENT_URL || 'https://www.muhsinahacademy.com';
+const BRAND = "Muhsinah Academy";
+const SITE_URL = process.env.CLIENT_URL || "https://www.muhsinahacademy.com";
 
 /* MAIL_FROM is resolved at send-time so it always matches whichever transport
  * is active. Gmail rejects emails where From: doesn't match the auth sender. */
 const getMailFrom = () =>
-  `Muhsinah Academy <${mailer.getActiveUser() || 'noreply@themuhsinahacademy.com'}>`;
+  `Muhsinah Academy <${mailer.getActiveUser() || "noreply@themuhsinahacademy.com"}>`;
 
-const GREEN_DARK = '#0D3B15';
-const GREEN      = '#1D6B1D';
-const GREEN_TINT = '#EBF7DC';
-const GOLD       = '#D4A017';
+const GREEN_DARK = "#0D3B15";
+const GREEN = "#1D6B1D";
+const GREEN_TINT = "#EBF7DC";
+const GOLD = "#D4A017";
 
 const base = (content) => `
 <!DOCTYPE html><html lang="en">
@@ -75,25 +77,34 @@ const base = (content) => `
 
 /** OTP for email verification / password reset */
 const sendOtpEmail = async ({ to, name, otp, type }) => {
-  const isVerify = type === 'verify_email';
+  const isVerify = type === "verify_email";
   const mail = {
-    from: getMailFrom(), to,
-    subject: isVerify ? `Verify your email — ${BRAND}` : `Reset your password — ${BRAND}`,
+    from: getMailFrom(),
+    to,
+    subject: isVerify
+      ? `Verify your email — ${BRAND}`
+      : `Reset your password — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Use this code to ${isVerify ? 'verify your email' : 'reset your password'}. It expires in <strong>30 minutes</strong>.</p>
+      <p>Use this code to ${isVerify ? "verify your email" : "reset your password"}. It expires in <strong>30 minutes</strong>.</p>
       <div class="ticket">
         <p style="color:#6B7B6B;margin:0 0 8px;font-size:13px">Your verification code</p>
         <div class="ticket-code">${otp}</div>
       </div>
       <p style="font-size:13px;color:#888">If you did not request this, please ignore this email.</p>
-    `)
+    `),
   };
   try {
     await mailer.sendMail(mail);
-    logEmail({ to, subject: mail.subject, type: 'otp', status: 'sent' });
+    logEmail({ to, subject: mail.subject, type: "otp", status: "sent" });
   } catch (err) {
-    logEmail({ to, subject: mail.subject, type: 'otp', status: 'failed', error: err.message });
+    logEmail({
+      to,
+      subject: mail.subject,
+      type: "otp",
+      status: "failed",
+      error: err.message,
+    });
     throw err;
   }
 };
@@ -101,7 +112,8 @@ const sendOtpEmail = async ({ to, name, otp, type }) => {
 /** Welcome after successful registration */
 const sendWelcomeEmail = async ({ to, name }) => {
   const mail = {
-    from: getMailFrom(), to,
+    from: getMailFrom(),
+    to,
     subject: `Welcome to ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -109,13 +121,24 @@ const sendWelcomeEmail = async ({ to, name }) => {
       <p>You can now browse courses, register for events, and book a personal consultation with Coach Madinah.</p>
       <div style="text-align:center"><a href="${SITE_URL}/courses" class="btn">Explore Courses</a></div>
       <p>JazakAllahu Khairan for joining us. We are honoured to walk this journey with you.</p>
-    `)
+    `),
   };
   try {
     await mailer.sendMail(mail);
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "sent",
+    });
   } catch (err) {
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "failed",
+      error: err.message,
+    });
     throw err;
   }
 };
@@ -123,7 +146,8 @@ const sendWelcomeEmail = async ({ to, name }) => {
 /** Course enrolment */
 const sendEnrolmentEmail = async ({ to, name, courseName }) => {
   const mail = {
-    from: getMailFrom(), to,
+    from: getMailFrom(),
+    to,
     subject: `Enrolled: ${courseName} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -134,37 +158,71 @@ const sendEnrolmentEmail = async ({ to, name, courseName }) => {
       </div>
       <div style="text-align:center"><a href="${SITE_URL}/dashboard/courses" class="btn">Go to My Courses</a></div>
       <p style="font-size:13px;color:#888">Learn at your own pace — your progress is saved automatically.</p>
-    `)
+    `),
   };
   try {
     await mailer.sendMail(mail);
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "sent",
+    });
   } catch (err) {
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "failed",
+      error: err.message,
+    });
     throw err;
   }
 };
 
 /** Event registration confirmation — generic across all delivery modes */
-const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketCode }) => {
-  console.log('[sendEventTicketEmail] ▶ to:', to, '| event:', event?.title, '| mode:', event?.delivery_mode, '| ticket:', ticketCode);
+const sendEventTicketEmail = async ({
+  to,
+  name,
+  event,
+  pkg,
+  packageName,
+  ticketCode,
+}) => {
+  console.log(
+    "[sendEventTicketEmail] ▶ to:",
+    to,
+    "| event:",
+    event?.title,
+    "| mode:",
+    event?.delivery_mode,
+    "| ticket:",
+    ticketCode,
+  );
 
-  if (!to)    throw new Error('sendEventTicketEmail: recipient email is missing');
-  if (!event) throw new Error('sendEventTicketEmail: event object is null/undefined');
+  if (!to) throw new Error("sendEventTicketEmail: recipient email is missing");
+  if (!event)
+    throw new Error("sendEventTicketEmail: event object is null/undefined");
 
-  const mode     = event.delivery_mode || (event.type === 'offline' ? 'physical' : 'online_meeting');
-  const isPhysical   = mode === 'physical';
-  const isWhatsapp   = mode === 'whatsapp';
-  const isOnlineMeet = mode === 'online_meeting';
-  const isHybrid     = mode === 'hybrid';
-  const currency     = event.currency || 'NGN';
-  const symbol       = currency === 'USD' ? '$' : '₦';
+  const mode =
+    event.delivery_mode ||
+    (event.type === "offline" ? "physical" : "online_meeting");
+  const isPhysical = mode === "physical";
+  const isWhatsapp = mode === "whatsapp";
+  const isOnlineMeet = mode === "online_meeting";
+  const isHybrid = mode === "hybrid";
+  const currency = event.currency || "NGN";
+  const symbol = currency === "USD" ? "$" : "₦";
 
-  const dateStr = new Date(event.event_date).toLocaleDateString('en-NG', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  const dateStr = new Date(event.event_date).toLocaleDateString("en-NG", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
-  const timeStr = new Date(event.event_date).toLocaleTimeString('en-NG', {
-    hour: '2-digit', minute: '2-digit'
+  const timeStr = new Date(event.event_date).toLocaleTimeString("en-NG", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   /* ── QR code — only for physical/hybrid check-in ── */
@@ -172,36 +230,39 @@ const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketC
   if (isPhysical || isHybrid) {
     try {
       qrDataUrl = await generateQrDataUrl(ticketCode);
-      console.log('[sendEventTicketEmail] QR generated ✅');
+      console.log("[sendEventTicketEmail] QR generated ✅");
     } catch (e) {
-      console.warn('[sendEventTicketEmail] QR generation skipped:', e.message);
+      console.warn("[sendEventTicketEmail] QR generation skipped:", e.message);
     }
   }
 
   /* ── Location / format section ── */
-  let locationHtml = '';
+  let locationHtml = "";
   if (isPhysical || isHybrid) {
-    locationHtml += `<div class="info"><span class="label">📍 Venue</span><span>${event.venue || 'TBA — check WhatsApp group for updates'}</span></div>`;
+    locationHtml += `<div class="info"><span class="label"> Venue</span><span>${event.venue || "TBA — check WhatsApp group for updates"}</span></div>`;
   }
   if (isOnlineMeet || isHybrid) {
-    locationHtml += `<div class="info"><span class="label">🌐 Format</span><span>Online — join link below</span></div>`;
+    locationHtml += `<div class="info"><span class="label"> Format</span><span>Online — join link below</span></div>`;
   }
   if (isWhatsapp) {
-    locationHtml += `<div class="info"><span class="label">💬 Format</span><span>WhatsApp — join link below</span></div>`;
+    locationHtml += `<div class="info"><span class="label"> Format</span><span>WhatsApp — join link below</span></div>`;
   }
 
   /* ── Ticket block (only for physical/hybrid) ── */
-  const ticketBlock = (isPhysical || isHybrid) ? `
+  const ticketBlock =
+    isPhysical || isHybrid
+      ? `
     <div class="ticket">
       <span class="gold-badge">${packageName}</span>
       <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
       <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
       <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
       ${locationHtml}
-      ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ''}
+      ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ""}
       <div class="ticket-code">${ticketCode}</div>
       <p style="font-size:11px;color:#888;margin:4px 0 0">Present this QR code or ticket number at the entrance</p>
-    </div>` : `
+    </div>`
+      : `
     <div style="background:${GREEN_TINT};border:1px solid ${GREEN};border-radius:12px;padding:20px;margin:20px 0">
       <span class="gold-badge">${packageName}</span>
       <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
@@ -212,98 +273,134 @@ const sendEventTicketEmail = async ({ to, name, event, pkg, packageName, ticketC
     </div>`;
 
   /* ── Online meeting link ── */
-  const meetSection = ((isOnlineMeet || isHybrid) && event.meeting_link) ? `
+  const meetSection =
+    (isOnlineMeet || isHybrid) && event.meeting_link
+      ? `
     <div style="background:#EBF7DC;border-left:4px solid ${GREEN};border-radius:8px;padding:16px;margin:20px 0">
       <p style="margin:0 0 6px;font-weight:700;color:${GREEN_DARK}">🔗 Online Join Link</p>
       <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">Click below at event time. Do not share — this link is tied to your registration.</p>
       <div style="text-align:center">
         <a href="${event.meeting_link}" style="display:inline-block;background:${GREEN};color:#fff;padding:10px 28px;border-radius:6px;text-decoration:none;font-weight:700">Join Event</a>
       </div>
-    </div>` : '';
+    </div>`
+      : "";
 
   /* ── WhatsApp section ── */
-  const whatsappSection = event.whatsapp_link ? `
+  const whatsappSection = event.whatsapp_link
+    ? `
     <div class="whatsapp-box">
       <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">
-        💬 ${isWhatsapp ? 'Join the WhatsApp Programme' : 'Join the Private WhatsApp Group'}
+        💬 ${isWhatsapp ? "Join the WhatsApp Programme" : "Join the Private WhatsApp Group"}
       </p>
       <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
-        ${isWhatsapp
-          ? 'This is a private WhatsApp-based programme. Join the group below to access all sessions and materials.'
-          : 'This link is exclusively for registered participants. Please do not share it publicly.'}
+        ${
+          isWhatsapp
+            ? "This is a private WhatsApp-based programme. Join the group below to access all sessions and materials."
+            : "This link is exclusively for registered participants. Please do not share it publicly."
+        }
       </p>
       <div style="text-align:center">
         <a href="${event.whatsapp_link}" class="whatsapp-btn">
-          ${isWhatsapp ? 'Join Programme on WhatsApp' : 'Join WhatsApp Group'}
+          ${isWhatsapp ? "Join Programme on WhatsApp" : "Join WhatsApp Group"}
         </a>
       </div>
-    </div>` : '';
+    </div>`
+    : "";
 
   /* ── Description ── */
-  const descSection = event.description ? `
+  const descSection = event.description
+    ? `
     <div style="margin:20px 0;padding:16px;background:#F9FBF6;border-radius:8px;border:1px solid #D4E8C4">
       <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">📋 About This Programme</p>
       <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.7;white-space:pre-line">${event.description}</p>
-    </div>` : '';
+    </div>`
+    : "";
 
   /* ── Package perks ── */
-  let perksHtml = '';
-  const pkgPerks = (() => { try { return pkg?.perks ? JSON.parse(pkg.perks) : null; } catch { return null; } })();
+  let perksHtml = "";
+  const pkgPerks = (() => {
+    try {
+      return pkg?.perks ? JSON.parse(pkg.perks) : null;
+    } catch {
+      return null;
+    }
+  })();
   if (pkg?.description || (Array.isArray(pkgPerks) && pkgPerks.length)) {
     perksHtml = `
     <div style="margin:20px 0;padding:16px;background:#FFFDF0;border-radius:8px;border:1px solid #F0E0A0">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">🎁 What's Included — ${packageName}</p>
-      ${pkg.description ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkg.description}</p>` : ''}
-      ${Array.isArray(pkgPerks) && pkgPerks.length
-        ? `<ul style="margin:0;padding-left:16px">${pkgPerks.map(p => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D">✅ ${p}</li>`).join('')}</ul>`
-        : ''}
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px"> What's Included — ${packageName}</p>
+      ${pkg.description ? `<p style="margin:0 0 8px;font-size:13px;color:#4A4A2A">${pkg.description}</p>` : ""}
+      ${
+        Array.isArray(pkgPerks) && pkgPerks.length
+          ? `<ul style="margin:0;padding-left:16px">${pkgPerks.map((p) => `<li style="margin:4px 0;font-size:13px;color:#2D3A2D"> ${p}</li>`).join("")}</ul>`
+          : ""
+      }
     </div>`;
   }
 
   /* ── Arrival reminder (physical only) ── */
-  const reminderSection = (isPhysical || isHybrid) ? `
+  const reminderSection =
+    isPhysical || isHybrid
+      ? `
     <div style="background:#FFF8E7;border-left:4px solid ${GOLD};border-radius:8px;padding:14px 16px;margin:20px 0">
       <p style="margin:0;font-size:13px;color:#5C4500">
-        <strong>📌 Reminder:</strong> Please arrive 10–15 minutes before the event starts. Bring this email or your ticket code for check-in.
+        <strong> Reminder:</strong> Please arrive 10–15 minutes before the event starts. Bring this email or your ticket code for check-in.
       </p>
-    </div>` : '';
+    </div>`
+      : "";
 
   const mail = {
-    from: getMailFrom(), to,
+    from: getMailFrom(),
+    to,
     subject: `Registration Confirmed: ${event.title} — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
-      <p>Your registration for <strong>${event.title}</strong> is confirmed! 🎉</p>
+      <p>Your registration for <strong>${event.title}</strong> is confirmed! </p>
       ${ticketBlock}
       ${descSection}
       ${perksHtml}
       ${meetSection}
       ${whatsappSection}
       ${reminderSection}
-      <p style="margin-top:24px">We look forward to seeing you. Barakallahu feekum. 🌿</p>
+      <p style="margin-top:24px">We look forward to seeing you. Barakallahu feekum. </p>
       <div style="text-align:center;margin-top:16px">
         <a href="${SITE_URL}/events" class="btn">View All Events</a>
       </div>
-    `)
+    `),
   };
 
   try {
-    console.log('[sendEventTicketEmail] Calling mailer.sendMail...');
+    console.log("[sendEventTicketEmail] Calling mailer.sendMail...");
     await mailer.sendMail(mail);
-    console.log('[sendEventTicketEmail] ✅ Email sent to:', to);
-    logEmail({ to, subject: mail.subject, type: 'email', status: 'sent' });
+    console.log("[sendEventTicketEmail] ✅ Email sent to:", to);
+    logEmail({ to, subject: mail.subject, type: "email", status: "sent" });
   } catch (err) {
-    console.error('[sendEventTicketEmail] ❌ mailer.sendMail failed:', err.message);
-    logEmail({ to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    console.error(
+      "[sendEventTicketEmail] ❌ mailer.sendMail failed:",
+      err.message,
+    );
+    logEmail({
+      to,
+      subject: mail.subject,
+      type: "email",
+      status: "failed",
+      error: err.message,
+    });
     throw err;
   }
 };
 
-
 /** Payment receipt */
-const sendPaymentReceiptEmail = async ({ to, name, amount, reference, description }) => {
+const sendPaymentReceiptEmail = async ({
+  to,
+  name,
+  amount,
+  reference,
+  description,
+}) => {
   const mail = {
-    from: getMailFrom(), to,
+    from: getMailFrom(),
+    to,
     subject: `Payment Receipt — ${BRAND}`,
     html: base(`
       <p>Assalamu Alaikum <strong>${name}</strong>,</p>
@@ -312,37 +409,58 @@ const sendPaymentReceiptEmail = async ({ to, name, amount, reference, descriptio
         <div class="info"><span class="label">Description</span><span>${description}</span></div>
         <div class="info"><span class="label">Amount</span><span style="font-weight:700;font-size:18px">₦${Number(amount).toLocaleString()}</span></div>
         <div class="info"><span class="label">Reference</span><span style="font-family:monospace;font-size:13px">${reference}</span></div>
-        <div class="info"><span class="label">Date</span><span>${new Date().toLocaleDateString('en-NG',{year:'numeric',month:'long',day:'numeric'})}</span></div>
+        <div class="info"><span class="label">Date</span><span>${new Date().toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })}</span></div>
       </div>
       <p style="font-size:13px;color:#888">Please keep this reference for your records. JazakAllahu Khairan.</p>
-    `)
+    `),
   };
   try {
     await mailer.sendMail(mail);
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "sent",
+    });
   } catch (err) {
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "failed",
+      error: err.message,
+    });
     throw err;
   }
 };
 
-module.exports = { sendOtpEmail, sendWelcomeEmail, sendEnrolmentEmail, sendEventTicketEmail, sendPaymentReceiptEmail, sendContactNotification };
+module.exports = {
+  sendOtpEmail,
+  sendWelcomeEmail,
+  sendEnrolmentEmail,
+  sendEventTicketEmail,
+  sendPaymentReceiptEmail,
+  sendContactNotification,
+};
 
 /** Contact form notification to admin */
-async function sendContactNotification ({ name, email, subject, message }) {
+async function sendContactNotification({ name, email, subject, message }) {
   // Primary recipient = site_email from settings (Coach Madinah's inbox)
   // Fallback = GMAIL_USER (the sending account) if settings not available
   let recipientEmail = process.env.SMTP_USER || process.env.GMAIL_USER;
   try {
-
-    const [[row]] = await db.query("SELECT `value` FROM settings WHERE `key` = 'site_email'");
+    const [[row]] = await db.query(
+      "SELECT `value` FROM settings WHERE `key` = 'site_email'",
+    );
     if (row?.value) recipientEmail = row.value;
-  } catch { /* use fallback */ }
+  } catch {
+    /* use fallback */
+  }
 
   if (!recipientEmail) return;
   const mail = {
-    from:    getMailFrom(),
-    to:      recipientEmail,
+    from: getMailFrom(),
+    to: recipientEmail,
     replyTo: email,
     subject: `[Muhsinah Academy] New Message: ${subject}`,
     html: base(`
@@ -357,14 +475,25 @@ async function sendContactNotification ({ name, email, subject, message }) {
         </div>
       </div>
       <p style="font-size:13px">You can reply directly to this email to respond to ${name}.</p>
-      <p style="font-size:13px;color:#888">View all messages in your <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/admin/messages" style="color:var(--green)">Admin Panel → Messages</a>.</p>
-    `)
+      <p style="font-size:13px;color:#888">View all messages in your <a href="${process.env.CLIENT_URL || "http://localhost:5173"}/admin/messages" style="color:var(--green)">Admin Panel → Messages</a>.</p>
+    `),
   };
   try {
     await mailer.sendMail(mail);
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'sent' });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "sent",
+    });
   } catch (err) {
-    logEmail({ to: mail.to, subject: mail.subject, type: 'email', status: 'failed', error: err.message });
+    logEmail({
+      to: mail.to,
+      subject: mail.subject,
+      type: "email",
+      status: "failed",
+      error: err.message,
+    });
     throw err;
   }
 }
