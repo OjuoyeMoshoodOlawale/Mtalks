@@ -258,6 +258,7 @@ exports.create = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
+<<<<<<< HEAD
   const allowed = [
     "title",
     "description",
@@ -364,6 +365,94 @@ exports.update = async (req, res) => {
     return ok(res, {
       message: "Event updated successfully",
     });
+=======
+  const id = req.params.id;
+  const { packages, delivery_mode, type, currency, ...rest } = req.body;
+
+  /* Derive delivery_mode and type for backward compat */
+  const mode        = delivery_mode || (type === 'offline' ? 'physical' : 'online_meeting');
+  const derivedType = mode === 'physical' ? 'offline' : 'online';
+
+  const allowed = ['title','description','banner','venue','meeting_link','whatsapp_link',
+                   'event_date','deadline','is_published'];
+  const updates = [`delivery_mode = ?`, `type = ?`, `currency = ?`];
+  const vals    = [mode, derivedType, currency || 'NGN'];
+
+  for (const key of allowed) {
+    if (key in rest) { updates.push(`${key} = ?`); vals.push(rest[key]); }
+  }
+
+  vals.push(id);
+
+  try {
+    await db.query(`UPDATE events SET ${updates.join(', ')} WHERE id = ?`, vals);
+    console.log('[events.update] ✅ event fields updated | id:', id);
+
+    /* ── Update packages if provided ── */
+    if (Array.isArray(packages)) {
+      console.log('[events.update] packages received:', packages.length);
+
+      /* Delete removed packages (those without an id or marked deleted) */
+      const keepIds = packages.filter(p => p.id).map(p => p.id);
+      if (keepIds.length) {
+        await db.query(
+          `DELETE FROM event_packages WHERE event_id = ? AND id NOT IN (${keepIds.map(() => '?').join(',')})`,
+          [id, ...keepIds]
+        );
+      } else {
+        await db.query('DELETE FROM event_packages WHERE event_id = ?', [id]);
+      }
+
+      for (const [i, pkg] of packages.entries()) {
+        console.log(`[events.update] pkg[${i}]:`, JSON.stringify(pkg));
+
+        const pkgPrice = pkg.price !== null && pkg.price !== undefined && pkg.price !== ''
+          ? parseFloat(pkg.price) : NaN;
+
+        if (!pkg.name || !pkg.name.trim()) {
+          console.warn(`[events.update] ⚠️  Skipping pkg[${i}] — no name`);
+          continue;
+        }
+        if (isNaN(pkgPrice)) {
+          console.warn(`[events.update] ⚠️  Skipping pkg[${i}] "${pkg.name}" — price NaN (raw: "${pkg.price}")`);
+          continue;
+        }
+
+        const earlyPrice = pkg.early_bird_price !== null && pkg.early_bird_price !== undefined && pkg.early_bird_price !== ''
+          ? parseFloat(pkg.early_bird_price) : null;
+
+        const values = [
+          pkg.name.trim(),
+          pkg.description || null,
+          pkgPrice,
+          (earlyPrice !== null && !isNaN(earlyPrice) && earlyPrice > 0) ? earlyPrice : null,
+          pkg.early_bird_deadline || null,
+          pkg.capacity ? parseInt(pkg.capacity) : 100,
+          JSON.stringify(pkg.perks || [])
+        ];
+
+        if (pkg.id) {
+          /* Update existing package */
+          await db.query(
+            `UPDATE event_packages SET name=?, description=?, price=?, early_bird_price=?,
+             early_bird_deadline=?, capacity=?, perks=? WHERE id=? AND event_id=?`,
+            [...values, pkg.id, id]
+          );
+          console.log(`[events.update] ✅ updated pkg[${i}] id=${pkg.id} "${pkg.name}" price=${pkgPrice}`);
+        } else {
+          /* Insert new package */
+          await db.query(
+            `INSERT INTO event_packages (event_id, name, description, price, early_bird_price,
+             early_bird_deadline, capacity, perks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, ...values]
+          );
+          console.log(`[events.update] ✅ inserted new pkg[${i}] "${pkg.name}" price=${pkgPrice}`);
+        }
+      }
+    }
+
+    return ok(res, { message: 'Event updated' });
+>>>>>>> 43efd3a4c3a4685071f86776dc6a514a47b6c1b7
   } catch (err) {
     logger.error("events.update", {
       error: err.message,

@@ -35,13 +35,34 @@ const fetchAll = async () => {
 onMounted(fetchAll)
 
 const openCreate = () => { editTarget.value=null; form.value=blankForm(); showForm.value=true }
-const openEdit   = (e) => {
-  editTarget.value=e
-  const dm = e.delivery_mode || (e.type==='offline' ? 'physical' : 'online_meeting');
-  form.value={ ...e, delivery_mode: dm, event_date: e.event_date?.slice(0,16), deadline: e.deadline?.slice(0,16),
-    packages: e.packages||[{ name:'Standard', description:'', price:'', early_bird_price:'', early_bird_deadline:'', capacity:100 }]
+const openEdit = async (e) => {
+  editTarget.value = e
+  showForm.value = true
+  try {
+    /* Fetch fresh from API — list data can truncate packages via GROUP_CONCAT */
+    const { data } = await api.get(`/events/${e.id}`)
+    const ev = data.data
+    const dm = ev.delivery_mode || (ev.type === 'offline' ? 'physical' : 'online_meeting')
+    form.value = {
+      ...ev,
+      delivery_mode: dm,
+      currency:   ev.currency || 'NGN',
+      event_date: ev.event_date ? ev.event_date.slice(0, 16) : '',
+      deadline:   ev.deadline   ? ev.deadline.slice(0, 16)   : '',
+      packages:   ev.packages && ev.packages.length
+        ? ev.packages
+        : [{ name:'', description:'', price:'', early_bird_price:'', early_bird_deadline:'', capacity:100 }]
+    }
+  } catch {
+    /* Fallback to list data */
+    const dm = e.delivery_mode || (e.type === 'offline' ? 'physical' : 'online_meeting')
+    form.value = {
+      ...e, delivery_mode: dm, currency: e.currency || 'NGN',
+      event_date: e.event_date ? e.event_date.slice(0, 16) : '',
+      deadline:   e.deadline   ? e.deadline.slice(0, 16)   : '',
+      packages: e.packages || [{ name:'', description:'', price:'', early_bird_price:'', early_bird_deadline:'', capacity:100 }]
+    }
   }
-  showForm.value=true
 }
 
 const addPackage = () => form.value.packages.push({ name:'', description:'', price:'', early_bird_price:'', early_bird_deadline:'', capacity:100 })
