@@ -411,3 +411,21 @@ async function sendContactNotification({ name, email, subject, message }) {
     throw err;
   }
 }
+
+module.exports = {
+  sendOtpEmail,
+  sendWelcomeEmail,
+  sendEnrolmentEmail,
+  sendEventTicketEmail,
+  sendPaymentReceiptEmail,
+  sendContactNotification,
+};
+
+module.exports = {
+  sendOtpEmail,
+  sendWelcomeEmail,
+  sendEnrolmentEmail,
+  sendEventTicketEmail,
+  sendPaymentReceiptEmail,
+  sendContactNotification,
+};
