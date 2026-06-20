@@ -279,6 +279,13 @@ exports.forgotPassword = async (req, res) => {
     }
 
     /* Non-blocking email — OTP is already in DB; mailer failure must not return 500 */
+    /* Always log OTP to console in dev for testing */
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('\n' + '='.repeat(44));
+      console.log('  PASSWORD RESET OTP: ' + cleanEmail);
+      console.log('  Code: ' + otp + '   (valid 30 min)');
+      console.log('='.repeat(44) + '\n');
+    }
     try {
       await sendOtpEmail({ to: cleanEmail, name, otp, type: 'reset_password' });
     } catch (mailErr) {
