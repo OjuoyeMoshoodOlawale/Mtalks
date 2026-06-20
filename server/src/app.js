@@ -86,6 +86,7 @@ app.use('/api/users',          require('./routes/users.routes'));
 app.use('/api/team',           require('./routes/team.routes'));
 app.use('/api/testimonials',   require('./routes/testimonials.routes'));
 app.use('/api/faqs',           require('./routes/faqs.routes'));
+app.use('/api/sync',      require('./routes/sync.routes'));
 app.use('/api/settings',       require('./routes/settings.routes'));
 app.use('/api/analytics',      require('./routes/analytics.routes'));
 app.use('/api/logs',           require('./routes/logs.routes'));

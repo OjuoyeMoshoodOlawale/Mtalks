@@ -307,3 +307,32 @@ CREATE TABLE IF NOT EXISTS email_logs (
   INDEX idx_status (status),
   INDEX idx_created (created_at)
 );
+
+/* ── Remote Sync Infrastructure ─────────────────────────────────────────── */
+CREATE TABLE IF NOT EXISTS sync_settings (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  remote_host     VARCHAR(200) NOT NULL DEFAULT '',
+  remote_port     SMALLINT UNSIGNED DEFAULT 3306,
+  remote_user     VARCHAR(100) NOT NULL DEFAULT '',
+  remote_password VARCHAR(200) NOT NULL DEFAULT '',
+  remote_database VARCHAR(100) NOT NULL DEFAULT '',
+  sync_interval   SMALLINT UNSIGNED DEFAULT 30,
+  sync_enabled    TINYINT(1) DEFAULT 0,
+  last_synced_at  DATETIME,
+  last_sync_status ENUM('success','failed','never') DEFAULT 'never',
+  last_sync_error TEXT,
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sync_logs (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  started_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  finished_at   DATETIME,
+  tables_synced SMALLINT DEFAULT 0,
+  rows_synced   INT DEFAULT 0,
+  rows_failed   INT DEFAULT 0,
+  status        ENUM('running','success','failed','partial') DEFAULT 'running',
+  error         TEXT,
+  details       JSON
+);
