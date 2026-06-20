@@ -16,6 +16,7 @@ router.post('/confirm-guest',                  ctrl.confirmGuestPayment);
 
 router.post('/webhook',  webhookLimiter,       ctrl.webhook);
 router.get('/',          verifyToken, requireAdmin, ctrl.getAll);
+router.get('/:id',       verifyToken, requireAdmin, ctrl.getOne);
 router.get('/my',        verifyToken,          ctrl.getMine);
 
 module.exports = router;

@@ -230,7 +230,7 @@ const sendEventTicketEmail = async ({
   if (isPhysical || isHybrid) {
     try {
       qrDataUrl = await generateQrDataUrl(ticketCode);
-      console.log("[sendEventTicketEmail] QR generated ✅");
+      console.log("[sendEventTicketEmail] QR generated ");
     } catch (e) {
       console.warn("[sendEventTicketEmail] QR generation skipped:", e.message);
     }
@@ -255,8 +255,8 @@ const sendEventTicketEmail = async ({
     <div class="ticket">
       <span class="gold-badge">${packageName}</span>
       <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-      <div class="info" style="justify-content:center"><span>📅 ${dateStr}</span></div>
-      <div class="info" style="justify-content:center"><span>🕐 ${timeStr}</span></div>
+      <div class="info" style="justify-content:center"><span> ${dateStr}</span></div>
+      <div class="info" style="justify-content:center"><span> ${timeStr}</span></div>
       ${locationHtml}
       ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Ticket" style="width:150px;height:150px;margin:16px auto;display:block"/>` : ""}
       <div class="ticket-code">${ticketCode}</div>
@@ -266,8 +266,8 @@ const sendEventTicketEmail = async ({
     <div style="background:${GREEN_TINT};border:1px solid ${GREEN};border-radius:12px;padding:20px;margin:20px 0">
       <span class="gold-badge">${packageName}</span>
       <p style="font-size:20px;font-weight:800;color:${GREEN_DARK};margin:12px 0 8px">${event.title}</p>
-      <div class="info"><span>📅 ${dateStr}</span></div>
-      <div class="info"><span>🕐 ${timeStr}</span></div>
+      <div class="info"><span> ${dateStr}</span></div>
+      <div class="info"><span> ${timeStr}</span></div>
       ${locationHtml}
       <p style="font-size:11px;color:#6B7B6B;margin:12px 0 0">Reference: <strong>${ticketCode}</strong></p>
     </div>`;
@@ -277,7 +277,7 @@ const sendEventTicketEmail = async ({
     (isOnlineMeet || isHybrid) && event.meeting_link
       ? `
     <div style="background:#EBF7DC;border-left:4px solid ${GREEN};border-radius:8px;padding:16px;margin:20px 0">
-      <p style="margin:0 0 6px;font-weight:700;color:${GREEN_DARK}">🔗 Online Join Link</p>
+      <p style="margin:0 0 6px;font-weight:700;color:${GREEN_DARK}"> Online Join Link</p>
       <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">Click below at event time. Do not share — this link is tied to your registration.</p>
       <div style="text-align:center">
         <a href="${event.meeting_link}" style="display:inline-block;background:${GREEN};color:#fff;padding:10px 28px;border-radius:6px;text-decoration:none;font-weight:700">Join Event</a>
@@ -290,7 +290,7 @@ const sendEventTicketEmail = async ({
     ? `
     <div class="whatsapp-box">
       <p style="margin:0 0 8px;font-weight:700;color:#1A5C2A">
-        💬 ${isWhatsapp ? "Join the WhatsApp Programme" : "Join the Private WhatsApp Group"}
+         ${isWhatsapp ? "Join the WhatsApp Programme" : "Join the Private WhatsApp Group"}
       </p>
       <p style="margin:0 0 12px;font-size:13px;color:#2D6A2D">
         ${
@@ -311,7 +311,7 @@ const sendEventTicketEmail = async ({
   const descSection = event.description
     ? `
     <div style="margin:20px 0;padding:16px;background:#F9FBF6;border-radius:8px;border:1px solid #D4E8C4">
-      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px">📋 About This Programme</p>
+      <p style="margin:0 0 8px;font-weight:700;color:${GREEN_DARK};font-size:14px"> About This Programme</p>
       <p style="margin:0;font-size:14px;color:#2D3A2D;line-height:1.7;white-space:pre-line">${event.description}</p>
     </div>`
     : "";
@@ -372,7 +372,7 @@ const sendEventTicketEmail = async ({
   try {
     console.log("[sendEventTicketEmail] Calling mailer.sendMail...");
     await mailer.sendMail(mail);
-    console.log("[sendEventTicketEmail] ✅ Email sent to:", to);
+    console.log("[sendEventTicketEmail]  Email sent to:", to);
     logEmail({ to, subject: mail.subject, type: "email", status: "sent" });
   } catch (err) {
     console.error(

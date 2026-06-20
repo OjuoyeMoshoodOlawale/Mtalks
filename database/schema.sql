@@ -118,11 +118,13 @@ CREATE TABLE events (
   description   TEXT,
   banner        VARCHAR(300),
   type          ENUM('online','offline') DEFAULT 'online',
+  delivery_mode ENUM('physical','online_meeting','whatsapp','hybrid') NOT NULL DEFAULT 'online_meeting',
   venue         VARCHAR(300),
   meeting_link  VARCHAR(500),
   whatsapp_link VARCHAR(500),
   event_date    DATETIME     NOT NULL,
   deadline      DATETIME     NOT NULL,
+  currency      ENUM('NGN','USD') NOT NULL DEFAULT 'NGN',
   is_published  TINYINT(1)   DEFAULT 0,
   created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

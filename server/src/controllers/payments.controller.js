@@ -709,3 +709,27 @@ exports.getMine = async (req, res) => {
     return serverErr(res, err, "Server error");
   }
 };
+
+/* ── Admin: get single payment with full detail for receipt ── */
+exports.getOne = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[p]] = await db.query(
+      `SELECT p.*,
+              COALESCE(u.name,  p.guest_name)  AS user_name,
+              COALESCE(u.email, p.guest_email) AS user_email,
+              CASE WHEN p.type='event'  THEN ev.title
+                   WHEN p.type='course' THEN c.title
+                   ELSE p.type END AS item_title,
+              ep.name AS package_name
+       FROM payments p
+       LEFT JOIN users         u  ON u.id  = p.user_id
+       LEFT JOIN events        ev ON ev.id = p.item_id AND p.type='event'
+       LEFT JOIN courses       c  ON c.id  = p.item_id AND p.type='course'
+       LEFT JOIN event_packages ep ON ep.id = CAST(JSON_UNQUOTE(JSON_EXTRACT(p.metadata,'$.package_id')) AS UNSIGNED)
+       WHERE p.id = ?`, [id]
+    );
+    if (!p) return notFound(res, 'Payment not found');
+    return ok(res, p);
+  } catch (err) { return serverErr(res, err, 'Could not fetch payment'); }
+};
