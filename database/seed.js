@@ -3,13 +3,19 @@
  * All tables, all new columns (delivery_mode, currency, is_sync)
  * Real Unsplash photo URLs
  *
- * Run:  node database/seed.js
+ * Run from project root:  node database/seed.js
  */
-require('dotenv').config({ path: require('path').join(__dirname, '../server/.env') });
 
-const mysql  = require('mysql2/promise');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
+/* Load dotenv from server/node_modules since that's where it's installed */
+try {
+  require('./server/node_modules/dotenv').config({ path: require('path').join(__dirname, 'server/.env') });
+} catch (_) {
+  require('dotenv').config({ path: require('path').join(__dirname, 'server/.env') });
+}
+
+const path   = require('path');
+const mysql  = require('./server/node_modules/mysql2/promise');
+const bcrypt = require('./server/node_modules/bcryptjs');
 
 const dbCfg = {
   host:     process.env.DB_HOST     || 'localhost',
