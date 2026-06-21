@@ -258,114 +258,6 @@ exports.create = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-<<<<<<< HEAD
-  const allowed = [
-    "title",
-    "description",
-    "banner",
-    "type",
-    "delivery_mode",
-    "venue",
-    "meeting_link",
-    "whatsapp_link",
-    "event_date",
-    "deadline",
-    "currency",
-    "is_published",
-  ];
-
-  const updates = [];
-  const vals = [];
-
-  for (const key of allowed) {
-    if (key in req.body) {
-      updates.push(`${key} = ?`);
-      vals.push(req.body[key]);
-    }
-  }
-
-  try {
-    // Update event details if any event fields were supplied
-    if (updates.length) {
-      vals.push(req.params.id);
-
-      await db.query(
-        `UPDATE events SET ${updates.join(", ")} WHERE id = ?`,
-        vals,
-      );
-    }
-
-    // Update packages if provided
-    if (Array.isArray(req.body.packages)) {
-      // Remove existing packages
-      await db.query("DELETE FROM event_packages WHERE event_id = ?", [
-        req.params.id,
-      ]);
-
-      // Insert new packages
-      for (const [i, pkg] of req.body.packages.entries()) {
-        const pkgPrice =
-          pkg.price !== null && pkg.price !== undefined && pkg.price !== ""
-            ? parseFloat(pkg.price)
-            : NaN;
-
-        if (!pkg.name?.trim()) {
-          console.warn(`[events.update] Skipping package ${i} - missing name`);
-          continue;
-        }
-
-        if (isNaN(pkgPrice)) {
-          console.warn(
-            `[events.update] Skipping package ${i} (${pkg.name}) - invalid price`,
-          );
-          continue;
-        }
-
-        const earlyPrice =
-          pkg.early_bird_price !== null &&
-          pkg.early_bird_price !== undefined &&
-          pkg.early_bird_price !== ""
-            ? parseFloat(pkg.early_bird_price)
-            : null;
-
-        await db.query(
-          `INSERT INTO event_packages
-          (
-            event_id,
-            name,
-            description,
-            price,
-            early_bird_price,
-            early_bird_deadline,
-            capacity,
-            perks
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            req.params.id,
-            pkg.name.trim(),
-            pkg.description || null,
-            pkgPrice,
-            earlyPrice !== null && !isNaN(earlyPrice) && earlyPrice > 0
-              ? earlyPrice
-              : null,
-            pkg.early_bird_deadline || null,
-            pkg.capacity ? parseInt(pkg.capacity, 10) : 100,
-            JSON.stringify(pkg.perks || []),
-          ],
-        );
-      }
-    }
-
-    // Prevent empty update requests
-    if (!updates.length && !Array.isArray(req.body.packages)) {
-      return badReq(res, "No valid fields");
-    }
-
-    return ok(res, {
-      message: "Event updated successfully",
-    });
-=======
   const id = req.params.id;
   const { packages, delivery_mode, type, currency, ...rest } = req.body;
 
@@ -386,13 +278,13 @@ exports.update = async (req, res) => {
 
   try {
     await db.query(`UPDATE events SET ${updates.join(', ')} WHERE id = ?`, vals);
-    console.log('[events.update] ✅ event fields updated | id:', id);
+    console.log('[events.update] event fields updated | id:', id);
 
     /* ── Update packages if provided ── */
     if (Array.isArray(packages)) {
       console.log('[events.update] packages received:', packages.length);
 
-      /* Delete removed packages (those without an id or marked deleted) */
+      /* Delete removed packages (those without an id) */
       const keepIds = packages.filter(p => p.id).map(p => p.id);
       if (keepIds.length) {
         await db.query(
@@ -404,17 +296,15 @@ exports.update = async (req, res) => {
       }
 
       for (const [i, pkg] of packages.entries()) {
-        console.log(`[events.update] pkg[${i}]:`, JSON.stringify(pkg));
-
         const pkgPrice = pkg.price !== null && pkg.price !== undefined && pkg.price !== ''
           ? parseFloat(pkg.price) : NaN;
 
         if (!pkg.name || !pkg.name.trim()) {
-          console.warn(`[events.update] ⚠️  Skipping pkg[${i}] — no name`);
+          console.warn(`[events.update] Skipping pkg[${i}] — no name`);
           continue;
         }
         if (isNaN(pkgPrice)) {
-          console.warn(`[events.update] ⚠️  Skipping pkg[${i}] "${pkg.name}" — price NaN (raw: "${pkg.price}")`);
+          console.warn(`[events.update] Skipping pkg[${i}] "${pkg.name}" — invalid price`);
           continue;
         }
 
@@ -432,27 +322,22 @@ exports.update = async (req, res) => {
         ];
 
         if (pkg.id) {
-          /* Update existing package */
           await db.query(
             `UPDATE event_packages SET name=?, description=?, price=?, early_bird_price=?,
              early_bird_deadline=?, capacity=?, perks=? WHERE id=? AND event_id=?`,
             [...values, pkg.id, id]
           );
-          console.log(`[events.update] ✅ updated pkg[${i}] id=${pkg.id} "${pkg.name}" price=${pkgPrice}`);
         } else {
-          /* Insert new package */
           await db.query(
             `INSERT INTO event_packages (event_id, name, description, price, early_bird_price,
              early_bird_deadline, capacity, perks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [id, ...values]
           );
-          console.log(`[events.update] ✅ inserted new pkg[${i}] "${pkg.name}" price=${pkgPrice}`);
         }
       }
     }
 
     return ok(res, { message: 'Event updated' });
->>>>>>> 43efd3a4c3a4685071f86776dc6a514a47b6c1b7
   } catch (err) {
     logger.error("events.update", {
       error: err.message,
