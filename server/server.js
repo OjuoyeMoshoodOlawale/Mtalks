@@ -67,7 +67,6 @@ console.log('');
 
 /* ── Start app ─────────────────────────────────────────────────────────── */
 const app    = require('./src/app');
-const cron   = require('node-cron');
 const logger = require('./src/utils/logger');
 const db     = require('./src/config/db');
 
@@ -98,30 +97,8 @@ async function startServer() {
   }
 }
 
-startServer().then(() => startSyncCron());
+startServer();
 
-/* ── Remote DB Sync Cron ─────────────────────────────────────────────── */
-async function startSyncCron() {
-  try {
-    const { runSync, getSyncSettings } = require('./src/services/sync.service');
-    const cfg = await getSyncSettings().catch(() => null);
-    if (!cfg?.sync_enabled) {
-      logger.info('[Sync] Disabled — cron not started');
-      return;
-    }
-    const minutes = Math.max(1, Math.min(parseInt(cfg.sync_interval) || 30, 1440));
-    const expr    = `*/${minutes} * * * *`;
-    cron.schedule(expr, async () => {
-      logger.info(`[Sync] Cron triggered (every ${minutes}m)`);
-      await runSync().catch(e => logger.error('[Sync] Cron error', { error: e.message }));
-    });
-    logger.info(`[Sync] Cron ready — running every ${minutes} minute(s)`);
-  } catch (e) {
-    logger.warn('[Sync] Could not start cron — run migration first: ' + e.message);
-  }
-}
-/* Expose so admin can restart cron after settings change */
-global.restartSyncCron = startSyncCron;
 
 
 process.on('unhandledRejection', (reason) => {

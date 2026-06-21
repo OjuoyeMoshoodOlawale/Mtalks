@@ -39,8 +39,7 @@ const nav = [
   { to: '/admin/settings',      icon: Settings,   label: 'Settings' },
   { to: '/admin/messages',      icon: MessageSquare, label: 'Messages', badge: true },
   { to: '/admin/muzzamil',      icon: Sparkles,   label: 'Muzzamil Bot' },
-  { to: '/admin/sync',  label: 'Remote Sync', icon: 'Database' },
-    { to: '/admin/logs',          icon: Bug,        label: 'Error Logs' },
+  { to: '/admin/logs',          icon: Bug,        label: 'Error Logs' },
 ]
 
 const isActive = (item) => item.exact ? route.path === item.to : route.path.startsWith(item.to)
